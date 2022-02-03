@@ -7,8 +7,8 @@ buildscript {
 plugins {
     checkstyle
     java
-    id("com.github.ben-manes.versions") version "0.36.0"
-    id("se.patrikerdes.use-latest-versions") version "0.2.15"
+    id("com.github.ben-manes.versions") version "0.36.0" apply false
+    id("se.patrikerdes.use-latest-versions") version "0.2.15" apply false
     id("com.simonharrer.modernizer") version "2.1.0-1" apply false
 }
 
@@ -66,7 +66,6 @@ subprojects {
     apply(plugin = "checkstyle")
     apply(plugin = "com.github.ben-manes.versions")
     apply(plugin = "se.patrikerdes.use-latest-versions")
-    apply(plugin = "com.simonharrer.modernizer")
 
     dependencies {
         annotationProcessor(group = "org.projectlombok", name = "lombok", version = "1.18.16")
@@ -174,21 +173,21 @@ subprojects {
     }
 }
 
-tasks {
-    named<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>("dependencyUpdates") {
-        checkForGradleUpdate = false
-
-        resolutionStrategy {
-            componentSelection {
-                all {
-                    if (candidate.displayName.contains("fernflower") || isNonStable(candidate.version)) {
-                        reject("Non stable")
-                    }
-                }
-            }
-        }
-    }
-}
+//tasks {
+//    named<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>("dependencyUpdates") {
+//        checkForGradleUpdate = false
+//
+//        resolutionStrategy {
+//            componentSelection {
+//                all {
+//                    if (candidate.displayName.contains("fernflower") || isNonStable(candidate.version)) {
+//                        reject("Non stable")
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
 
 fun isNonStable(version: String): Boolean {
     return listOf("ALPHA", "BETA", "RC").any {
