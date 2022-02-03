@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Owain van Brakel <https:github.com/Owain94>
+ * Copyright (c) 2019 Owain van Brakel <https://github.com/Owain94>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,14 +23,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-rootProject.name = "BD Plugins"
+plugins {
+    `kotlin-dsl`
+}
 
-for (project in rootProject.children) {
-    project.apply {
-        projectDir = file(name)
-        buildFileName = "$name.gradle.kts"
+repositories {
+    jcenter()
+}
 
-        require(projectDir.isDirectory) { "Project '${project.path} must have a $projectDir directory" }
-        require(buildFile.isFile) { "Project '${project.path} must have a $buildFile build script" }
-    }
+dependencies {
+    implementation(gradleApi())
+    implementation(group = "org.json", name = "json", version = "20190722")
+    implementation(group = "com.savvasdalkitsis", name = "json-merge", version = "0.0.4")
+    implementation(group = "com.squareup.okhttp3", name = "okhttp", version = "4.9.0")
+}
+
+kotlinDslPluginOptions {
+    experimentalWarning.set(false)
 }
