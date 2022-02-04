@@ -5,14 +5,8 @@ buildscript {
 }
 
 plugins {
-    checkstyle
     java
-    id("com.github.ben-manes.versions") version "0.36.0" apply false
-    id("se.patrikerdes.use-latest-versions") version "0.2.15" apply false
-    id("com.simonharrer.modernizer") version "2.1.0-1" apply false
 }
-
-project.extra["GithubUrl"] = "https://github.com/bigdrizzle13/BDPlugins"
 
 apply<BootstrapPlugin>()
 apply<VersionPlugin>()
@@ -24,11 +18,10 @@ allprojects {
 }
 
 subprojects {
-    var subprojectName = name
     group = "com.openosrs.externals"
 
-    project.extra["PluginProvider"] = "BD"
-    project.extra["ProjectUrl"] = "https://github.com/bigdrizzle13/BDPlugin"
+    project.extra["PluginProvider"] = "OpenOSRS"
+    project.extra["ProjectUrl"] = "https://discord.gg/OpenOSRS"
     project.extra["PluginLicense"] = "3-Clause BSD License"
 
     repositories {
@@ -63,9 +56,6 @@ subprojects {
     }
 
     apply<JavaPlugin>()
-    apply(plugin = "checkstyle")
-    apply(plugin = "com.github.ben-manes.versions")
-    apply(plugin = "se.patrikerdes.use-latest-versions")
 
     dependencies {
         annotationProcessor(group = "org.projectlombok", name = "lombok", version = "1.18.16")
@@ -74,27 +64,36 @@ subprojects {
         compileOnly(group = "com.openosrs", name = "http-api", version = ProjectVersions.openosrsVersion)
         compileOnly(group = "com.openosrs", name = "runelite-api", version = ProjectVersions.openosrsVersion)
         compileOnly(group = "com.openosrs", name = "runelite-client", version = ProjectVersions.openosrsVersion)
-        compileOnly(group = "com.openosrs.rs", name = "runescape-api", version = ProjectVersions.openosrsVersion)
 
         compileOnly(group = "org.apache.commons", name = "commons-text", version = "1.9")
-        compileOnly(group = "com.google.guava", name = "guava", version = "30.0-jre")
-        compileOnly(group = "com.google.inject", name = "guice", version = "4.2.3", classifier = "no_aop")
+        compileOnly(group = "com.google.guava", name = "guava", version = "30.1.1-jre")
+        compileOnly(group = "com.google.inject", name = "guice", version = "5.0.1")
         compileOnly(group = "com.google.code.gson", name = "gson", version = "2.8.6")
         compileOnly(group = "net.sf.jopt-simple", name = "jopt-simple", version = "5.0.4")
         compileOnly(group = "ch.qos.logback", name = "logback-classic", version = "1.2.3")
         compileOnly(group = "org.projectlombok", name = "lombok", version = "1.18.16")
-        compileOnly(group = "com.squareup.okhttp3", name = "okhttp", version = "4.9.0")
-        compileOnly(group = "org.pf4j", name = "pf4j", version = "3.5.0")
-        compileOnly(group = "io.reactivex.rxjava3", name = "rxjava", version = "3.0.7")
-        compileOnly(group = "org.pushing-pixels", name = "radiance-substance", version = "2.5.1")
+        compileOnly(group = "com.squareup.okhttp3", name = "okhttp", version = "4.9.1")
+        compileOnly(group = "org.pf4j", name = "pf4j", version = "3.6.0")
+        compileOnly(group = "io.reactivex.rxjava3", name = "rxjava", version = "3.1.1")
+
+        testAnnotationProcessor(group = "org.projectlombok", name = "lombok", version = "1.18.16")
+
+        testImplementation(group = "com.openosrs", name = "http-api", version = ProjectVersions.openosrsVersion)
+        testImplementation(group = "com.openosrs", name = "runelite-api", version = ProjectVersions.openosrsVersion)
+        testImplementation(group = "com.openosrs", name = "runelite-client", version = ProjectVersions.openosrsVersion)
+
+        testImplementation(group = "org.pf4j", name = "pf4j", version = "3.5.0")
+        testImplementation(group = "com.google.inject.extensions", name = "guice-testlib", version = "4.2.3")
+        testImplementation(group = "com.google.code.gson", name = "gson", version = "2.8.6")
+        testImplementation(group = "net.sf.jopt-simple", name = "jopt-simple", version = "5.0.4")
+        testImplementation(group = "junit", name = "junit", version = "4.13.1")
+        testImplementation(group = "org.mockito", name = "mockito-core", version = "3.6.0")
+        testImplementation(group = "org.mockito", name = "mockito-inline", version = "3.6.0")
+        testImplementation(group = "org.projectlombok", name = "lombok", version = "1.18.16")
+        testImplementation(group = "org.hamcrest", name = "hamcrest-library", version = "2.2")
+        testImplementation(group = "org.slf4j", name = "slf4j-api", version = "1.7.32")
     }
 
-    checkstyle {
-        maxWarnings = 0
-        toolVersion = "8.25"
-        isShowViolations = true
-        isIgnoreFailures = false
-    }
 
     configure<PublishingExtension> {
         repositories {
@@ -119,24 +118,6 @@ subprojects {
             options.encoding = "UTF-8"
         }
 
-        withType<Jar> {
-            doLast {
-                copy {
-                    from("./build/libs/")
-                    into("../release/")
-                }
-
-                val externalManagerDirectory: String = project.findProperty("externalManagerDirectory")?.toString() ?: System.getProperty("user.home") + "/.openosrs/plugins"
-                val releaseToExternalModules: List<String> = project.findProperty("releaseToExternalmanager")?.toString()?.split(",") ?: emptyList()
-                if (releaseToExternalModules.contains(subprojectName) || releaseToExternalModules.contains("all")) {
-                    copy {
-                        from("./build/libs/")
-                        into(externalManagerDirectory)
-                    }
-                }
-            }
-        }
-
         withType<AbstractArchiveTask> {
             isPreserveFileTimestamps = false
             isReproducibleFileOrder = true
@@ -144,53 +125,9 @@ subprojects {
             fileMode = 420
         }
 
-        withType<Checkstyle> {
-            group = "verification"
-
-            exclude("**/ScriptVarType.java")
-            exclude("**/LayoutSolver.java")
-            exclude("**/RoomType.java")
-        }
-
-        named<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>("dependencyUpdates") {
-            checkForGradleUpdate = false
-
-            resolutionStrategy {
-                componentSelection {
-                    all {
-                        if (candidate.displayName.contains("fernflower") || isNonStable(candidate.version)) {
-                            reject("Non stable")
-                        }
-                    }
-                }
-            }
-        }
-
         register<Copy>("copyDeps") {
             into("./build/deps/")
             from(configurations["runtimeClasspath"])
         }
-    }
-}
-
-//tasks {
-//    named<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>("dependencyUpdates") {
-//        checkForGradleUpdate = false
-//
-//        resolutionStrategy {
-//            componentSelection {
-//                all {
-//                    if (candidate.displayName.contains("fernflower") || isNonStable(candidate.version)) {
-//                        reject("Non stable")
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
-
-fun isNonStable(version: String): Boolean {
-    return listOf("ALPHA", "BETA", "RC").any {
-        version.toUpperCase().contains(it)
     }
 }

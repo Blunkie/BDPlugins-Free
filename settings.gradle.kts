@@ -25,8 +25,6 @@
 
 rootProject.name = "BD Plugins"
 
-include(":testplugin")
-
 for (project in rootProject.children) {
     project.apply {
         projectDir = file(name)
@@ -37,3 +35,4 @@ for (project in rootProject.children) {
     }
 }
 include("testplugin")
+include("oneclickutils")
