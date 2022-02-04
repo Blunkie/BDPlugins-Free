@@ -25,6 +25,9 @@
 
 rootProject.name = "BD Plugins"
 
+include("testplugin")
+include("oneclickutils")
+
 for (project in rootProject.children) {
     project.apply {
         projectDir = file(name)
@@ -34,5 +37,8 @@ for (project in rootProject.children) {
         require(buildFile.isFile) { "Project '${project.path} must have a $buildFile build script" }
     }
 }
-include("testplugin")
-include("oneclickutils")
+
+
+
+
+
