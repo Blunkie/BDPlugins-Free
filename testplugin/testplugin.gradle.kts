@@ -30,6 +30,9 @@ version = "0.0.1"
 project.extra["PluginName"] = "BD Test Plugin" // This is the name that is used in the external plugin manager panel
 project.extra["PluginDescription"] = "BD Test Plugin" // This is the description that is used in the external plugin manager panel
 
+dependencies {
+    compileOnly(group = "com.openosrs.externals", name = "oneclickutils", version = "0.0.1");
+}
 
 tasks {
     jar {
@@ -39,7 +42,8 @@ tasks {
                     "Plugin-Id" to nameToId(project.extra["PluginName"] as String),
                     "Plugin-Provider" to project.extra["PluginProvider"],
                     "Plugin-Description" to project.extra["PluginDescription"],
-                    "Plugin-License" to project.extra["PluginLicense"]
+                    "Plugin-License" to project.extra["PluginLicense"],
+                    "Plugin-Dependencies" to nameToId("BD One Click Utils")
             ))
         }
     }

@@ -25,8 +25,9 @@
 
 rootProject.name = "BD Plugins"
 
-include("testplugin")
+
 include("oneclickutils")
+include("testplugin")
 
 for (project in rootProject.children) {
     project.apply {

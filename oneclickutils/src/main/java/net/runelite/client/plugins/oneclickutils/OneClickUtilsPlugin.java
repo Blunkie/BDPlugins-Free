@@ -16,6 +16,7 @@ import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -28,11 +29,13 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.*;
 
+import static net.runelite.api.ItemID.*;
+import static net.runelite.api.ItemID.RING_OF_DUELING7;
+
 @Extension
 @PluginDescriptor(
         name = "BD One Click Utils",
-        description = "BD Utils for one click plugins",
-        enabledByDefault = true
+        description = "BD Utils for one click plugins"
 )
 
 @Slf4j
@@ -40,13 +43,13 @@ import java.util.*;
 @PluginDependency(iUtils.class)
 public class OneClickUtilsPlugin extends Plugin {
     @Inject
-    private OneClickUtilsConfig config;
-    @Inject
     private ConfigManager configManager;
     @Inject
     private InventoryUtils inventory;
     @Inject
     private BankUtils bankUtils;
+    @Inject
+    private ItemManager itemManager;
     @Inject
     private ObjectUtils objectUtils;
     @Inject
@@ -56,9 +59,16 @@ public class OneClickUtilsPlugin extends Plugin {
 
 
     private static final Splitter NEWLINE_SPLITTER = Splitter.on("\n").omitEmptyStrings().trimResults();
-    ArrayList<InventoryItem> desiredInventory = new ArrayList<InventoryItem>();
-    ArrayList<Integer> desiredEquipment = new ArrayList<Integer>();
-    Queue<LegacyMenuEntry> actionQueue = new LinkedList<LegacyMenuEntry>();
+    private static final Set<Integer> duelingRings = Set.of(RING_OF_DUELING8, RING_OF_DUELING1, RING_OF_DUELING2, RING_OF_DUELING3, RING_OF_DUELING4, RING_OF_DUELING5, RING_OF_DUELING6, RING_OF_DUELING7);
+    private static final Set<Integer> maxCape = Set.of(MAX_CAPE);
+    private static final Set<Integer> craftingCape = Set.of(CRAFTING_CAPE, CRAFTING_CAPET);
+    Set<String> foodMenuOption = Set.of("Drink","Eat");
+    Set<Integer> prayerPotionIDs = Set.of(PRAYER_POTION3,PRAYER_POTION2,PRAYER_POTION1,
+            PRAYER_POTION4,SUPER_RESTORE4,SUPER_RESTORE3,SUPER_RESTORE2,SUPER_RESTORE1,
+            ZAMORAK_BREW3,ZAMORAK_BREW2,ZAMORAK_BREW1,ZAMORAK_BREW4);
+    Set<Integer> foodBlacklist = Set.of(PRAYER_POTION3,PRAYER_POTION2,PRAYER_POTION1,
+            PRAYER_POTION4,SUPER_RESTORE4,SUPER_RESTORE3,SUPER_RESTORE2,SUPER_RESTORE1,
+            ZAMORAK_BREW3,ZAMORAK_BREW2,ZAMORAK_BREW1,ZAMORAK_BREW4);
 
 
     @Provides
@@ -67,41 +77,13 @@ public class OneClickUtilsPlugin extends Plugin {
         return configManager.getConfig(OneClickUtilsConfig.class);
     }
 
-    @Subscribe
-    public void onGameTick(GameTick tick) {
-
-    }
-
-    @Subscribe
-    public void onMenuOptionClicked(MenuOptionClicked event) {
-        handleClick(event);
-        log.info(event.getMenuOption() + ", "
-                + event.getMenuTarget() + ", "
-                + event.getId() + ", "
-                + event.getMenuAction().name() + ", "
-                + event.getParam0() + ", "
-                + event.getParam1());
-    }
-
-    private void handleClick(MenuOptionClicked event) {
-    }
-
     @Override
     protected void startUp() {
-        parseConfig();
-        actionQueue.clear();
     }
 
     @Subscribe
     private void onConfigChanged(ConfigChanged event) {
         if(event.getGroup().equals("oneclickutils")) {
-            parseConfig();
-        }
-    }
-
-    private void addToActionQueue(Queue<LegacyMenuEntry> queue){
-        for (LegacyMenuEntry entry : queue){
-            actionQueue.add(entry);
         }
     }
 
@@ -116,6 +98,164 @@ public class OneClickUtilsPlugin extends Plugin {
                         .type(ChatMessageType.CONSOLE)
                         .runeLiteFormattedMessage(chatMessage)
                         .build());
+    }
+
+    public LegacyMenuEntry teleToBank(BankTele bankTeleMethod){
+        ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
+        if (equipmentContainer != null) {
+            Item[] items = equipmentContainer.getItems();
+            for (Item item : items) {
+                switch (bankTeleMethod){
+                    case CASTLE_WARS:
+                        if (duelingRings.contains(item.getId())) {
+                            return new LegacyMenuEntry("Castle Wars",
+                                    "Ring of dueling",
+                                    3,
+                                    MenuAction.CC_OP,
+                                    -1,
+                                    WidgetInfo.EQUIPMENT_RING.getId(),
+                                    false);
+                        }
+                        //todo: add these teleports
+                    case CRAFTING_CAPE:
+                        return null;
+                    case MAX_CAPE:
+                        return null;
+                }
+
+            }
+        }
+        log.info("One Click Utils: couldn't find a bank teleport method");
+        sendGameMessage("One Click Utils: couldn't find a bank teleport method");
+        return null;
+    }
+
+    public LegacyMenuEntry eatFood(){
+        return eatFood(this.foodMenuOption, this.foodBlacklist);
+    }
+
+    public LegacyMenuEntry eatFood(Set<String> fMO, Set<Integer> fBL) {
+        WidgetItem food = getItemMenu(fMO,fBL);
+        if (food == null){
+            log.info("One Click Utils: couldn't find food");
+            sendGameMessage("One Click Utils: couldn't find food");
+            return null;
+        }
+        String[] foodMenuOptions = itemManager.getItemComposition(food.getId()).getInventoryActions();
+        return new LegacyMenuEntry(foodMenuOptions[0],
+                Integer.toString(food.getId()),
+                food.getId(),
+                MenuAction.ITEM_FIRST_OPTION,
+                food.getIndex(),
+                WidgetInfo.INVENTORY.getId(),
+                false);
+    }
+
+    public boolean hasFood(Set<String> fMO, Set<Integer> fBL){
+        WidgetItem food = getItemMenu(fMO,fBL);
+        return food != null;
+    }
+
+    public boolean hasFood(){
+        return hasFood(this.foodMenuOption, this.foodBlacklist);
+    }
+
+    public LegacyMenuEntry dropItem(WidgetItem item) {
+        if (item != null){
+            return new LegacyMenuEntry(
+                    "Drop",
+                    "Item",
+                    item.getId(),
+                    MenuAction.ITEM_FIFTH_OPTION,
+                    item.getIndex(),
+                    WidgetInfo.INVENTORY.getId(),
+                    false);
+        }
+        return null;
+    }
+
+    public LegacyMenuEntry dropItem(int itemID){
+        return dropItem(getWidgetItem(itemID));
+    }
+
+    public Queue<LegacyMenuEntry> dropItems(HashSet<Integer> dropIDs, String dropOrderString) {
+        HashMap<Integer, Integer> dropOrder = new HashMap<>();
+        int order = 0;
+        Set<Integer> uniquieIndexes = new HashSet<>();
+        if (dropOrderString == null) {
+            //Use default order
+            dropOrderString = "1,2,5,6,9,10,13,14,17,18,21,22,25,26,3,4,7,8,11,12,15,16,19,20,23,24,27,28";
+        }
+        for (String s : Text.COMMA_SPLITTER.split(dropOrderString)) {
+            try {
+                int inventoryIndex = Integer.parseInt(s) - 1;
+                //check if inx is out of bounds or already used
+                if (inventoryIndex > 27 || inventoryIndex < 0 || uniquieIndexes.contains(inventoryIndex)) {
+                    continue;
+                }
+                uniquieIndexes.add(inventoryIndex);
+                dropOrder.put(order, inventoryIndex);
+                order++;
+            } catch (Exception ignored) {
+                log.info("One Click Utils: error parsing drop order string");
+                sendGameMessage("One Click Utils: error parsing drop order string");
+                return null;
+            }
+        }
+        Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
+        List<WidgetItem> matchedItems = new ArrayList<>();
+        if (inventoryWidget != null) {
+            for (int i = 0; i <= 27; i++) {
+                int index = dropOrder.get(i);
+                WidgetItem item = inventoryWidget.getWidgetItem(index);
+                //drop all case
+                if(item != null && dropIDs == null){
+                    matchedItems.add(item);
+                }else if (item != null && dropIDs.contains(item.getId())) {
+                    matchedItems.add(item);
+                }
+            }
+        }
+        Queue<LegacyMenuEntry> dropQueue = new LinkedList<LegacyMenuEntry>();
+        for (WidgetItem dropItem : matchedItems){
+            dropQueue.add(dropItem(dropItem));
+        }
+        return dropQueue;
+    }
+
+
+    public List<WidgetItem> idsToWidgetItems(Collection<Integer> ids) {
+        Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
+        List<WidgetItem> matchedItems = new ArrayList<>();
+        if (inventoryWidget != null) {
+            Collection<WidgetItem> items = inventoryWidget.getWidgetItems();
+            for(WidgetItem widgetItem : items) {
+                if (widgetItem != null && ids.contains(widgetItem.getId())) {
+                    matchedItems.add(widgetItem);
+                }
+            }
+            return matchedItems;
+        }
+        return null;
+    }
+
+    private WidgetItem getItemMenu(Collection<String>menuOptions, Collection<Integer> ignoreIDs) {
+        Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
+        if (inventoryWidget != null) {
+            Collection<WidgetItem> items = inventoryWidget.getWidgetItems();
+            for (WidgetItem item : items) {
+                if (ignoreIDs.contains(item.getId())) {
+                    continue;
+                }
+                String[] menuActions = itemManager.getItemComposition(item.getId()).getInventoryActions();
+                for (String action : menuActions) {
+                    if (action != null && menuOptions.contains(action)) {
+                        return item;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     public LegacyMenuEntry useItemOnItem(int highlightedItemID, int targetItemID){
@@ -153,26 +293,49 @@ public class OneClickUtilsPlugin extends Plugin {
         return null;
     }
 
-    private void parseConfig() {
-        desiredInventory.clear();
-        desiredEquipment.clear();
-        for (String line : NEWLINE_SPLITTER.split(config.desiredInventory())){
+    public ArrayList<InventoryItem> parseInventoryItems(String desiredInventoryString){
+        ArrayList<InventoryItem> desiredInventory = new ArrayList<InventoryItem>();
+        for (String line : NEWLINE_SPLITTER.split(desiredInventoryString)){
             try {
                 String[] split = line.split(",");
                 desiredInventory.add(new InventoryItem(Integer.parseInt(split[0].trim()),
                         Integer.parseInt(split[1].trim()),
                         split[2].trim().equalsIgnoreCase("true")));
             }catch(ArrayIndexOutOfBoundsException e) {
+                log.info("One Click Utils: Inventory parsing error, your syntax is probably wrong");
                 sendGameMessage("One Click Utils: Inventory parsing error, your syntax is probably wrong");
+                return null;
             }
         }
-        for (String s : Text.COMMA_SPLITTER.split(config.desiredEquipment())){
+        return desiredInventory;
+    }
+
+    public HashSet<Integer> parseIOs(String idString){
+        HashSet<Integer> ids = new HashSet<>();
+        for (String s : Text.COMMA_SPLITTER.split(idString)) {
+            try {
+                ids.add(Integer.parseInt(s));
+            }
+            catch (NumberFormatException ignored) {
+                log.info("One Click Utils: Ids list parsing error, your syntax is probably wrong");
+                sendGameMessage("One Click Utils: Id list parsing error, your syntax is probably wrong");
+            }
+        }
+        return ids;
+    }
+
+    private ArrayList<Integer> parseConfig(String desiredEquipmentString) {
+        ArrayList<Integer> desiredEquipment = new ArrayList<Integer>();
+        for (String s : Text.COMMA_SPLITTER.split(desiredEquipmentString)){
             try{
                 desiredEquipment.add(Integer.parseInt(s));
             }catch (NumberFormatException e){
+                log.info("One Click Utils: Equipment parsing error, your syntax is probably wrong");
                 sendGameMessage("One Click Utils: Equipment parsing error, your syntax is probably wrong");
+                return null;
             }
         }
+        return desiredEquipment;
     }
 
     public LegacyMenuEntry openBank(){
@@ -474,5 +637,22 @@ public class OneClickUtilsPlugin extends Plugin {
             return ((GameObject) gameObject).getSceneMinLocation().getY();
         }
         return(gameObject.getLocalLocation().getSceneY());
+    }
+
+    public void combineQueues(Queue<LegacyMenuEntry> destinationQueue, Queue<LegacyMenuEntry> extraQueue){
+        if (extraQueue == null){
+            log.info("Extra queue is null");
+            return;
+        }
+        if(destinationQueue == null){
+            log.info("Destination queue is null");
+            return;
+        }
+        while (!extraQueue.isEmpty()){
+            LegacyMenuEntry event = extraQueue.poll();
+            if(event != null){
+                destinationQueue.add(event);
+            }
+        }
     }
 }
