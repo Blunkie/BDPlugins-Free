@@ -5,7 +5,6 @@ import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.queries.BankItemQuery;
 import net.runelite.api.util.Text;
 import net.runelite.api.widgets.Widget;
@@ -69,6 +68,11 @@ public class OneClickUtilsPlugin extends Plugin {
     Set<Integer> foodBlacklist = Set.of(PRAYER_POTION3,PRAYER_POTION2,PRAYER_POTION1,
             PRAYER_POTION4,SUPER_RESTORE4,SUPER_RESTORE3,SUPER_RESTORE2,SUPER_RESTORE1,
             ZAMORAK_BREW3,ZAMORAK_BREW2,ZAMORAK_BREW1,ZAMORAK_BREW4);
+    private long lastXP = 0;
+    private int ticksSinceLastXpDrop = -1;
+
+
+
 
 
     @Provides
@@ -100,6 +104,21 @@ public class OneClickUtilsPlugin extends Plugin {
                         .build());
     }
 
+    @Subscribe
+    public void onGameTick(GameTick event) {
+        if (client.getOverallExperience() == lastXP){
+            ticksSinceLastXpDrop++;
+        }else{
+            ticksSinceLastXpDrop = 0;
+            lastXP = client.getOverallExperience();
+        }
+    }
+
+
+    public int getTicksSinceLastXpDrop(){
+        return ticksSinceLastXpDrop;
+    }
+
     public LegacyMenuEntry teleToBank(BankTele bankTeleMethod){
         ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
         if (equipmentContainer != null) {
@@ -107,7 +126,10 @@ public class OneClickUtilsPlugin extends Plugin {
             for (Item item : items) {
                 switch (bankTeleMethod){
                     case CASTLE_WARS:
+                        log.info("here2");
+                        log.info("ItemID = " + item.getId());
                         if (duelingRings.contains(item.getId())) {
+                            log.info("here3");
                             return new LegacyMenuEntry("Castle Wars",
                                     "Ring of dueling",
                                     3,
@@ -116,13 +138,14 @@ public class OneClickUtilsPlugin extends Plugin {
                                     WidgetInfo.EQUIPMENT_RING.getId(),
                                     false);
                         }
+                        continue;
                         //todo: add these teleports
                     case CRAFTING_CAPE:
+                        log.info("here34");
                         return null;
                     case MAX_CAPE:
                         return null;
                 }
-
             }
         }
         log.info("One Click Utils: couldn't find a bank teleport method");
@@ -163,8 +186,8 @@ public class OneClickUtilsPlugin extends Plugin {
     public LegacyMenuEntry dropItem(WidgetItem item) {
         if (item != null){
             return new LegacyMenuEntry(
-                    "Drop",
-                    "Item",
+                    "Drop Item",
+                    Integer.toString(item.getId()),
                     item.getId(),
                     MenuAction.ITEM_FIFTH_OPTION,
                     item.getIndex(),
