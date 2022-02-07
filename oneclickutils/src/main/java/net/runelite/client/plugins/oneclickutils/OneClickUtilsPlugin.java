@@ -20,6 +20,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.iutils.*;
+import net.runelite.rs.api.RSClient;
 import org.pf4j.Extension;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
@@ -151,6 +152,15 @@ public class OneClickUtilsPlugin extends Plugin {
         log.info("One Click Utils: couldn't find a bank teleport method");
         sendGameMessage("One Click Utils: couldn't find a bank teleport method");
         return null;
+    }
+
+    //Always consume the event when using this
+    public void walkTile(int x, int y) {
+        RSClient rsClient = (RSClient) client;
+        rsClient.setSelectedSceneTileX(x);
+        rsClient.setSelectedSceneTileY(y);
+        rsClient.setViewportWalking(true);
+        rsClient.setCheckClick(false);
     }
 
     public LegacyMenuEntry eatFood(){

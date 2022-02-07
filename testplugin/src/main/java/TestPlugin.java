@@ -3,6 +3,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.MenuAction;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
@@ -15,6 +17,7 @@ import net.runelite.client.plugins.oneclickutils.BankTele;
 import net.runelite.client.plugins.oneclickutils.LegacyMenuEntry;
 import net.runelite.client.plugins.oneclickutils.OneClickUtilsPlugin;
 import org.pf4j.Extension;
+import net.runelite.rs.api.RSClient;
 
 import javax.inject.Inject;
 import java.util.LinkedList;
@@ -60,23 +63,7 @@ public class TestPlugin extends Plugin
 
 
 	@Subscribe
-	private void onClientTick(ClientTick event)
-	{
-
-		if(client.getLocalPlayer() == null || client.getGameState() != GameState.LOGGED_IN || client.isMenuOpen()){
-			return;
-		}
-		if (!actionQueue.isEmpty()){
-			client.insertMenuItem(
-					"OneClickTest " + actionQueue.peek().getOption(),
-					actionQueue.peek().getTarget(),
-					0,
-					0,
-					0,
-					0,
-					true);
-		}
-
+	private void onClientTick(ClientTick event) {
 	}
 
 	@Subscribe
@@ -92,14 +79,14 @@ public class TestPlugin extends Plugin
 
 	private void handleClick(MenuOptionClicked event) {
 		//Only intercept cancel or oneclicktest options
-		if (!(event.getMenuOption().equals("Cancel") || event.getMenuOption().startsWith("OneClickTest"))) {
+		if (!event.getMenuOption().equals("Cancel")) {
 			return;
 		}
-
 		log.info("In handle click");
-		testDrop(event);
 
 	}
+
+
 
 
 	@Subscribe
@@ -109,6 +96,12 @@ public class TestPlugin extends Plugin
 		}else{
 			configManager.setConfiguration("autoprayflick", "onlyInNmz", false);
 		}
+	}
+
+	private void testWalk(MenuOptionClicked event){
+		event.consume();
+		LocalPoint point = LocalPoint.fromWorld(client, new WorldPoint(2630,3365,client.getPlane()));
+		oneClickUtilsPlugin.walkTile(point.getSceneX(), point.getSceneY());
 	}
 
 	private void testCastleWarsTele(MenuOptionClicked event){
