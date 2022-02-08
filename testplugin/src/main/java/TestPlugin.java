@@ -83,7 +83,6 @@ public class TestPlugin extends Plugin
 			return;
 		}
 		log.info("In handle click");
-
 	}
 
 
@@ -98,6 +97,26 @@ public class TestPlugin extends Plugin
 		}
 	}
 
+	private void testLogout(MenuOptionClicked event) {
+		if(actionQueue.isEmpty()) {
+			actionQueue.add(oneClickUtilsPlugin.logout());
+		}
+		if(!actionQueue.isEmpty()){
+			log.info(actionQueue.toString());
+			event.setMenuEntry(actionQueue.poll());
+		}
+	}
+
+	private void testMaxCapePOHTele(MenuOptionClicked event){
+		if(actionQueue.isEmpty()) {
+			actionQueue.add(oneClickUtilsPlugin.maxCapeTeleToPOH());
+		}
+		if(!actionQueue.isEmpty()){
+			log.info(actionQueue.toString());
+			event.setMenuEntry(actionQueue.poll());
+		}
+	}
+
 	private void testWalk(MenuOptionClicked event){
 		event.consume();
 		LocalPoint point = LocalPoint.fromWorld(client, new WorldPoint(2630,3365,client.getPlane()));
@@ -107,6 +126,16 @@ public class TestPlugin extends Plugin
 	private void testCastleWarsTele(MenuOptionClicked event){
 		if(actionQueue.isEmpty()) {
 			actionQueue.add(oneClickUtilsPlugin.teleToBank(BankTele.CASTLE_WARS));
+		}
+		if(!actionQueue.isEmpty()){
+			log.info(actionQueue.toString());
+			event.setMenuEntry(actionQueue.poll());
+		}
+	}
+
+	private void testMaxCapeBankTele(MenuOptionClicked event){
+		if(actionQueue.isEmpty()) {
+			actionQueue.add(oneClickUtilsPlugin.teleToBank(BankTele.MAX_CAPE));
 		}
 		if(!actionQueue.isEmpty()){
 			log.info(actionQueue.toString());

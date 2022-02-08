@@ -19,7 +19,11 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.plugins.iutils.*;
+import net.runelite.client.plugins.iutils.InventoryUtils;
+import net.runelite.client.plugins.iutils.BankUtils;
+import net.runelite.client.plugins.iutils.ObjectUtils;
+import net.runelite.client.plugins.iutils.iUtils;
+import net.runelite.client.plugins.iutils.Banks;
 import net.runelite.rs.api.RSClient;
 import org.pf4j.Extension;
 import net.runelite.client.config.ConfigManager;
@@ -60,7 +64,7 @@ public class OneClickUtilsPlugin extends Plugin {
 
     private static final Splitter NEWLINE_SPLITTER = Splitter.on("\n").omitEmptyStrings().trimResults();
     private static final Set<Integer> duelingRings = Set.of(RING_OF_DUELING8, RING_OF_DUELING1, RING_OF_DUELING2, RING_OF_DUELING3, RING_OF_DUELING4, RING_OF_DUELING5, RING_OF_DUELING6, RING_OF_DUELING7);
-    private static final Set<Integer> maxCape = Set.of(MAX_CAPE);
+    private static final Set<Integer> maxCape = Set.of(MAX_CAPE_13342);
     private static final Set<Integer> craftingCape = Set.of(CRAFTING_CAPE, CRAFTING_CAPET);
     Set<String> foodMenuOption = Set.of("Drink","Eat");
     Set<Integer> prayerPotionIDs = Set.of(PRAYER_POTION3,PRAYER_POTION2,PRAYER_POTION1,
@@ -127,10 +131,7 @@ public class OneClickUtilsPlugin extends Plugin {
             for (Item item : items) {
                 switch (bankTeleMethod){
                     case CASTLE_WARS:
-                        log.info("here2");
-                        log.info("ItemID = " + item.getId());
                         if (duelingRings.contains(item.getId())) {
-                            log.info("here3");
                             return new LegacyMenuEntry("Castle Wars",
                                     "Ring of dueling",
                                     3,
@@ -140,12 +141,21 @@ public class OneClickUtilsPlugin extends Plugin {
                                     false);
                         }
                         continue;
-                        //todo: add these teleports
+                        //todo: add crafting cape
                     case CRAFTING_CAPE:
-                        log.info("here34");
+
                         return null;
                     case MAX_CAPE:
-                        return null;
+                        if (item.getId() == MAX_CAPE_13342){
+                            return new LegacyMenuEntry("Crafting Guild",
+                                    "Max Cape",
+                                    4,
+                                    MenuAction.CC_OP,
+                                    -1,
+                                    WidgetInfo.EQUIPMENT_CAPE.getId(),
+                                    false);
+                        }
+                        continue;
                 }
             }
         }
@@ -153,6 +163,39 @@ public class OneClickUtilsPlugin extends Plugin {
         sendGameMessage("One Click Utils: couldn't find a bank teleport method");
         return null;
     }
+
+    public LegacyMenuEntry maxCapeTeleToPOH(){
+        ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
+        if (equipmentContainer != null) {
+            Item[] items = equipmentContainer.getItems();
+            for (Item item : items) {
+                if (item.getId() == MAX_CAPE_13342) {
+                    return new LegacyMenuEntry("Tele to POH",
+                            "Max Cape",
+                            5,
+                            MenuAction.CC_OP,
+                            -1,
+                            WidgetInfo.EQUIPMENT_CAPE.getId(),
+                            false);
+                }
+            }
+        }
+        log.info("One Click Utils: couldn't tele to POH with max cape");
+        sendGameMessage("One Click Utils: couldn't tele to POH with max cape");
+        return null;
+    }
+
+    public LegacyMenuEntry logout(){
+        return new LegacyMenuEntry("Logout",
+                "",
+                1,
+                MenuAction.CC_OP,
+                -1,
+                11927560,
+                false);
+    }
+
+
 
     //Always consume the event when using this
     public void walkTile(int x, int y) {
