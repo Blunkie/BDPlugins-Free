@@ -1,9 +1,13 @@
+package net.runelite.client.plugins.testplugin;
+
+
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.MenuAction;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldArea;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameTick;
@@ -42,6 +46,8 @@ public class TestPlugin extends Plugin
 	private ConfigManager configManager;
 	@Inject
 	private Client client;
+
+	private static final WorldArea prifSpawnArea = new WorldArea(3253,6072,25,25,0);
 
 	// Provides our config
 	@Provides
@@ -83,6 +89,12 @@ public class TestPlugin extends Plugin
 			return;
 		}
 		log.info("In handle click");
+
+		if (prifSpawnArea.contains(client.getLocalPlayer().getWorldLocation())){
+			event.setMenuEntry(oneClickUtilsPlugin.maxCapeTeleToPOH());
+			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
+			return;
+		}
 	}
 
 

@@ -1,5 +1,7 @@
+import ProjectVersions.openosrsVersion
+
 /*
- * Copyright (c) 2018, Andrew EP | ElPinche256 <https://github.com/ElPinche256>
+ * Copyright (c) 2019 Owain van Brakel <https://github.com/Owain94>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,48 +25,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
+version = "0.0.1"
 
-@ConfigGroup("BDTestPlugin")
-public interface TestConfig extends Config
-{
-	@ConfigItem(
-			position = 0,
-			keyName = "desiredInventory",
-			name = "Desired Inventory",
-			description = "Syntax: ItemID, amount, stackable. Ex: <995,10,true> Use. -1 for amount to fill. Put stackable items first"
-	)
-	default String desiredInventory()
-	{
-		return "11978,2\n3144,5";
-	}
+project.extra["PluginName"] = "BD Life Saver" // This is the name that is used in the external plugin manager panel
+project.extra["PluginDescription"] = "BD Life Saver" // This is the description that is used in the external plugin manager panel
+project.extra["ProjectSupportUrl"] = "https://github.com/bigdrizzle13/BDPlugins"
 
-	@ConfigItem(
-			position = 1,
-			keyName = "exactInventory",
-			name = "Exact Inventory",
-			description = "Require this exact inventory (don't allow other items, and have exact amounts of everything)."
-	)
-	default boolean exactInventory() { return false; }
+dependencies {
+    compileOnly(group = "com.openosrs.externals", name = "oneclickutils", version = "0.0.1+");
+}
 
-	@ConfigItem(
-			position = 0,
-			keyName = "desiredEquipment",
-			name = "Desired Equipment",
-			description = "Syntax: EquipmentItemID1, EquipmentItemID2, ..."
-	)
-	default String desiredEquipment()
-	{
-		return "2552, 11978";
-	}
-
-	@ConfigItem(
-			position = 1,
-			keyName = "dropIds",
-			name = "Drop IDs",
-			description = "ID of items to drop"
-	)
-	default String dropIDs() {return "11328,11332,11330";}
+tasks {
+    jar {
+        manifest {
+            attributes(mapOf(
+                    "Plugin-Version" to project.version,
+                    "Plugin-Id" to nameToId(project.extra["PluginName"] as String),
+                    "Plugin-Provider" to project.extra["PluginProvider"],
+                    "Plugin-Description" to project.extra["PluginDescription"],
+                    "Plugin-License" to project.extra["PluginLicense"],
+                    "Plugin-Dependencies" to nameToId("BD One Click Utils")
+            ))
+        }
+    }
 }
