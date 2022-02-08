@@ -2,6 +2,7 @@ version = "0.0.1"
 
 project.extra["PluginName"] = "BD One Click Pickpocket"
 project.extra["PluginDescription"] = "BD QOL for pickpocketing"
+project.extra["ProjectSupportUrl"] = "https://github.com/bigdrizzle13/BDPlugins"
 
 dependencies {
     compileOnly(group = "com.openosrs.externals", name = "iutils", version = "4.7.7+");

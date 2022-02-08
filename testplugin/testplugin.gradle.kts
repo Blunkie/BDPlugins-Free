@@ -29,6 +29,7 @@ version = "0.0.1"
 
 project.extra["PluginName"] = "BD Test Plugin" // This is the name that is used in the external plugin manager panel
 project.extra["PluginDescription"] = "BD Test Plugin" // This is the description that is used in the external plugin manager panel
+project.extra["ProjectSupportUrl"] = "https://github.com/bigdrizzle13/BDPlugins"
 
 dependencies {
     compileOnly(group = "com.openosrs.externals", name = "oneclickutils", version = "0.0.1+");

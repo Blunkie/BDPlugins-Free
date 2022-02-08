@@ -8,6 +8,8 @@ plugins {
     java
 }
 
+project.extra["GithubUrl"] = "https://github.com/bigdrizzle13/BDPlugins"
+
 apply<BootstrapPlugin>()
 apply<VersionPlugin>()
 
