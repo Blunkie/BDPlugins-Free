@@ -6,12 +6,15 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.MenuAction;
+import net.runelite.api.NPC;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldArea;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.queries.NPCQuery;
+import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -26,6 +29,7 @@ import net.runelite.rs.api.RSClient;
 import javax.inject.Inject;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Set;
 
 @Extension
 @PluginDescriptor(
@@ -48,6 +52,7 @@ public class TestPlugin extends Plugin
 	private Client client;
 
 	private static final WorldArea prifSpawnArea = new WorldArea(3253,6072,25,25,0);
+	Set<String> herbMenuOption = Set.of("Clean");
 
 	// Provides our config
 	@Provides
@@ -90,11 +95,11 @@ public class TestPlugin extends Plugin
 		}
 		log.info("In handle click");
 
-		if (prifSpawnArea.contains(client.getLocalPlayer().getWorldLocation())){
-			event.setMenuEntry(oneClickUtilsPlugin.maxCapeTeleToPOH());
-			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
-			return;
-		}
+//		WidgetItem herbs = oneClickUtilsPlugin.getItemMenu(herbMenuOption, Set.of());
+//		if (herbs == null){
+//
+//		}
+
 	}
 
 

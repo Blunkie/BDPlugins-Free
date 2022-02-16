@@ -7,17 +7,14 @@ import net.runelite.api.coords.WorldArea;
 import net.runelite.api.events.*;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.events.XpDropEvent;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.plugins.oneclickutils.LegacyMenuEntry;
 import net.runelite.client.plugins.oneclickutils.OneClickUtilsPlugin;
 import org.pf4j.Extension;
 import javax.inject.Inject;
-import java.util.LinkedList;
-import java.util.Queue;
 
+@SuppressWarnings("ALL")
 @Extension
 @PluginDescriptor(
 	name = "BD Life Saver",
@@ -42,21 +39,13 @@ public class LifeSaverPlugin extends Plugin {
 
 	private static final WorldArea prifSpawnArea = new WorldArea(3253,6072,25,25,0);
 
-	private Queue<LegacyMenuEntry> actionQueue = new LinkedList<LegacyMenuEntry>();
-
 	@Override
 	protected void startUp() {
-		actionQueue.clear();
 		configManager.setConfiguration("autoprayflick", "onlyInNmz", false);
 	}
 
 	@Override
 	protected void shutDown() {
-	}
-
-
-	@Subscribe
-	private void onClientTick(ClientTick event) {
 	}
 
 	@Subscribe

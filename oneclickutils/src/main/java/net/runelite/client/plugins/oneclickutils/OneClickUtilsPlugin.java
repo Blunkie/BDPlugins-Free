@@ -315,7 +315,7 @@ public class OneClickUtilsPlugin extends Plugin {
         return null;
     }
 
-    private WidgetItem getItemMenu(Collection<String>menuOptions, Collection<Integer> ignoreIDs) {
+    public WidgetItem getItemMenu(Collection<String>menuOptions, Collection<Integer> ignoreIDs) {
         Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
         if (inventoryWidget != null) {
             Collection<WidgetItem> items = inventoryWidget.getWidgetItems();
