@@ -71,7 +71,7 @@ public class LifeSaverPlugin extends Plugin {
 
 	@Subscribe
 	private void onChatMessage(ChatMessage event){
-		if (event.getMessage().equals("You are out of food")){
+		if (event.getMessage().contains("You are out of food")){
 			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
 		}
 	}

@@ -54,10 +54,8 @@ public class TestPlugin extends Plugin
 	private static final WorldArea prifSpawnArea = new WorldArea(3253,6072,25,25,0);
 	Set<String> herbMenuOption = Set.of("Clean");
 
-	// Provides our config
 	@Provides
-	TestConfig provideConfig(ConfigManager configManager)
-	{
+	TestConfig provideConfig(ConfigManager configManager) {
 		return configManager.getConfig(TestConfig.class);
 	}
 
@@ -94,12 +92,7 @@ public class TestPlugin extends Plugin
 			return;
 		}
 		log.info("In handle click");
-
-//		WidgetItem herbs = oneClickUtilsPlugin.getItemMenu(herbMenuOption, Set.of());
-//		if (herbs == null){
-//
-//		}
-
+		testWorldHop(event);
 	}
 
 
@@ -107,10 +100,15 @@ public class TestPlugin extends Plugin
 
 	@Subscribe
 	private void onGameTick(GameTick gameTick) {
-		if(oneClickUtilsPlugin.getTicksSinceLastXpDrop() > 100){
-			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
-		}else{
-			configManager.setConfiguration("autoprayflick", "onlyInNmz", false);
+	}
+
+	private void testWorldHop(MenuOptionClicked event){
+		if(actionQueue.isEmpty()) {
+			actionQueue.add(oneClickUtilsPlugin.worldHop(600));
+		}
+		if(!actionQueue.isEmpty()){
+			log.info(actionQueue.toString());
+			event.setMenuEntry(actionQueue.poll());
 		}
 	}
 

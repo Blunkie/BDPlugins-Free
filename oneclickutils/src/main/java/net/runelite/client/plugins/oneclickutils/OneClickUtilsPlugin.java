@@ -16,6 +16,7 @@ import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.WorldService;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -24,6 +25,8 @@ import net.runelite.client.plugins.iutils.BankUtils;
 import net.runelite.client.plugins.iutils.ObjectUtils;
 import net.runelite.client.plugins.iutils.iUtils;
 import net.runelite.client.plugins.iutils.Banks;
+import net.runelite.http.api.worlds.World;
+import net.runelite.http.api.worlds.WorldResult;
 import net.runelite.rs.api.RSClient;
 import org.pf4j.Extension;
 import net.runelite.client.config.ConfigManager;
@@ -60,6 +63,8 @@ public class OneClickUtilsPlugin extends Plugin {
     private ChatMessageManager chatMessageManager;
     @Inject
     private Client client;
+    @Inject
+    private WorldService worldService;
 
 
     private static final Splitter NEWLINE_SPLITTER = Splitter.on("\n").omitEmptyStrings().trimResults();
@@ -552,6 +557,22 @@ public class OneClickUtilsPlugin extends Plugin {
             }
         }
         return queue;
+    }
+
+    public LegacyMenuEntry worldHop(int worldID){
+        WorldResult worldResult = worldService.getWorlds();
+        World world = worldResult.findWorld(worldID);
+        if (world == null) {
+            log.debug("Couldn't find world " + worldID);
+            return null;
+        }
+        return new LegacyMenuEntry("",
+                "",
+                1,
+                MenuAction.CC_OP,
+                worldID,
+                4522000,
+                false);
     }
 
     public LegacyMenuEntry depositAllOfItem(WidgetItem item) {
