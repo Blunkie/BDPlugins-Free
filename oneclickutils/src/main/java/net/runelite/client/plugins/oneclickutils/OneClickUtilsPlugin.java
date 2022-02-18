@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.queries.BankItemQuery;
+import net.runelite.api.queries.GameObjectQuery;
 import net.runelite.api.util.Text;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
@@ -433,6 +434,13 @@ public class OneClickUtilsPlugin extends Plugin {
         return null;
     }
 
+    public GameObject getGameObject(int id){
+        return new GameObjectQuery()
+                .idEquals(id)
+                .result(client)
+                .nearestTo(client.getLocalPlayer());
+    }
+
     public LegacyMenuEntry equipItemFromInventory(int itemID){
         return equipItemFromInventory(getWidgetItem(itemID));
     }
@@ -480,6 +488,19 @@ public class OneClickUtilsPlugin extends Plugin {
         return queue;
     }
 
+    public LegacyMenuEntry drinkPotionFromBank(int itemID){
+        if ( inventory.getWidgetItem(itemID) != null) {
+            return new LegacyMenuEntry("Eat/Drink",
+                    "Item",
+                    9,
+                    MenuAction.CC_OP,
+                    inventory.getWidgetItem(itemID).getIndex(),
+                    983043,
+                    false);
+        }
+        return null;
+    }
+
 
     public LegacyMenuEntry equipItemFromBank(int itemID){
         return new LegacyMenuEntry("Equip",
@@ -491,7 +512,7 @@ public class OneClickUtilsPlugin extends Plugin {
                 false);
     }
 
-    private boolean isItemEquipped(Collection<Integer> itemIds) {
+    public boolean isItemEquipped(Collection<Integer> itemIds) {
         assert client.isClientThread();
         ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
         if (equipmentContainer != null) {
@@ -678,7 +699,11 @@ public class OneClickUtilsPlugin extends Plugin {
         }
     }
 
-    public LegacyMenuEntry withdrawItemAmount(int bankItemID, int amount) {
+    public LegacyMenuEntry withdrawItemAmount(int bankItemID, int amount){
+        return withdrawItemAmount(bankItemID, amount, -1);
+    }
+
+    public LegacyMenuEntry withdrawItemAmount(int bankItemID, int amount, int postActionTickDelay) {
         Widget item = getBankItemWidget(bankItemID);
         if (item != null) {
             int identifier;
@@ -699,12 +724,13 @@ public class OneClickUtilsPlugin extends Plugin {
                     break;
             }
             return new LegacyMenuEntry("Withdraw " + amount,
-                    "",
+                    "ID " + item.getId(),
                     identifier,
                     MenuAction.CC_OP,
                     item.getIndex(),
                     WidgetInfo.BANK_ITEM_CONTAINER.getId(),
-                    false);
+                    false,
+                    postActionTickDelay);
         }
         return null;
     }
@@ -750,6 +776,15 @@ public class OneClickUtilsPlugin extends Plugin {
             if(event != null){
                 destinationQueue.add(event);
             }
+        }
+    }
+
+    public void sanitizeEnqueue(LegacyMenuEntry menuEntry, Queue<LegacyMenuEntry> actionQueue, String errorMessage) {
+        if (menuEntry != null){
+            actionQueue.add(menuEntry);
+            log.info("Adding to queue: " + menuEntry.getOption() + ", " + menuEntry.getTarget());
+        }else{
+            log.info(errorMessage);
         }
     }
 }

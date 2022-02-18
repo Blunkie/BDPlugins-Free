@@ -18,6 +18,18 @@ public class LegacyMenuEntry implements MenuEntry
     private int param0;
     private int param1;
     private boolean forceLeftClick;
+    private int postActionTickDelay;
+
+    public LegacyMenuEntry (String option, String target, int identifier, MenuAction menuAction, int param0, int param1, boolean forceLeftClick){
+        this.option = option;
+        this.target = target;
+        this.identifier = identifier;
+        this.menuAction = menuAction;
+        this.param0 = param0;
+        this.param1 = param1;
+        this.forceLeftClick = forceLeftClick;
+        this.postActionTickDelay = -1;
+    }
 
     @Override
     public boolean isDeprioritized()
@@ -36,6 +48,10 @@ public class LegacyMenuEntry implements MenuEntry
     {
         return null;
     }
+
+    public void setPostActionTickDelay(int postActionTickDelay){ this.postActionTickDelay = postActionTickDelay;}
+
+    public int getPostActionTickDelay(){return this.postActionTickDelay;}
 
     public int getOpcode()
     {

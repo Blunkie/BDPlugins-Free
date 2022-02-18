@@ -28,8 +28,7 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
 @ConfigGroup("BDTestPlugin")
-public interface TestConfig extends Config
-{
+public interface TestConfig extends Config {
 	@ConfigItem(
 			position = 0,
 			keyName = "desiredInventory",

@@ -4,17 +4,12 @@ package net.runelite.client.plugins.testplugin;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.MenuAction;
-import net.runelite.api.NPC;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldArea;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.api.queries.NPCQuery;
-import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -24,7 +19,6 @@ import net.runelite.client.plugins.oneclickutils.BankTele;
 import net.runelite.client.plugins.oneclickutils.LegacyMenuEntry;
 import net.runelite.client.plugins.oneclickutils.OneClickUtilsPlugin;
 import org.pf4j.Extension;
-import net.runelite.rs.api.RSClient;
 
 import javax.inject.Inject;
 import java.util.LinkedList;
@@ -41,7 +35,6 @@ import java.util.Set;
 @PluginDependency(OneClickUtilsPlugin.class)
 public class TestPlugin extends Plugin
 {
-	// Injects our config
 	@Inject
 	private TestConfig config;
 	@Inject
@@ -92,7 +85,6 @@ public class TestPlugin extends Plugin
 			return;
 		}
 		log.info("In handle click");
-		testWorldHop(event);
 	}
 
 
