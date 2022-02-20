@@ -16,4 +16,14 @@ public interface BDBlastFurnaceConfig extends Config {
     {
         return BarType.ADAMANTITE;
     }
+
+    @ConfigItem(
+            keyName = "doGold",
+            name = "Do Gold",
+            description = "Prioritizes gold bars until enough coal is in the machine. Doesnt support glove switch right now",
+            position = 1
+    )
+    default boolean doGold() {
+        return false;
+    }
 }

@@ -1,7 +1,6 @@
 package net.runelite.client.plugins.bdblastfurnace;
 
 import com.google.inject.Provides;
-import com.openosrs.client.game.WorldLocation;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
@@ -154,6 +153,10 @@ public class BDBlastFurnacePlugin extends Plugin
 					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.depositAllOfItem(barID), actionQueue, "Couldn't desposit bars");
 				}
 
+				if (inventory.containsItem(GOLD_BAR)){
+					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.depositAllOfItem(GOLD_BAR), actionQueue, "Couldn't desposit gold bars");
+				}
+
 				//Withdraw stamina
 				if (client.getVar(Varbits.RUN_SLOWED_DEPLETION_ACTIVE) == 0 && client.getEnergy() <= 60){
 					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawItemAmount(STAMINA_POTION1,1,-1), actionQueue, "Couldn't withdraw 1 dose stamina");
@@ -166,13 +169,19 @@ public class BDBlastFurnacePlugin extends Plugin
 					coalBagIsEmpty = false;
 				}
 
-				//There is enough coal in the machine, bring ores, otherwise bring coal.
+				//There is enough coal in the machine, bring ores, otherwise bring coal/gold
 				if (client.getVar(Varbits.BLAST_FURNACE_COAL) >= coalThreshold || !bringCoal){
 					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawAllItem(oreID), actionQueue, "Couldn't withdraw ores");
 					expectingBarsToBeMade = true;
 				}else{
-					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawAllItem(COAL), actionQueue, "Couldn't withdraw ores");
-					expectingBarsToBeMade = false;
+					if (config.doGold()){
+						oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawAllItem(GOLD_ORE), actionQueue, "Couldn't withdraw ores");
+						expectingBarsToBeMade = true;
+					}else{
+						oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawAllItem(COAL), actionQueue, "Couldn't withdraw ores");
+						expectingBarsToBeMade = false;
+					}
+
 				}
 
 				//Go to conveyor
@@ -180,7 +189,7 @@ public class BDBlastFurnacePlugin extends Plugin
 			}
 
 			//if inventory is full && have bars && bank isnt open, open bank
-			else if (inventory.isFull() && inventory.containsItem(barID) && !bankUtils.isOpen()){
+			else if (inventory.isFull() && (inventory.containsItem(barID) || inventory.containsItem(GOLD_BAR)) && !bankUtils.isOpen()){
 				oneClickUtilsPlugin.sanitizeEnqueue(this.openBank(), actionQueue, "Couldn't open bank");
 			}
 
