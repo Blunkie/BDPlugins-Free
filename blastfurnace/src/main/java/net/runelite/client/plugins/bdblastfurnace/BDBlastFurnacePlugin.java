@@ -9,6 +9,7 @@ import net.runelite.api.Varbits;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldArea;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
@@ -68,7 +69,6 @@ public class BDBlastFurnacePlugin extends Plugin
 	private static final int CONVEYOR_ID = 9100;
 	private static final int DISPENSER_ID = 9092;
 	private static final int DISPENSER_WIDGET_ID = 17694734;
-	private static final int COALBAG_ID = 12019;
 	private static final int BANK_INTERACTION_PARAM1 = 983043;
 	private boolean coalBagIsEmpty = true;
 	private int barID;
@@ -78,8 +78,10 @@ public class BDBlastFurnacePlugin extends Plugin
 	private boolean expectingBarsToBeMade = false;
 	private static final WorldArea bfArea = new WorldArea(1933,4956,30,30,0);
 	private static final WorldPoint nextToConveyor = new WorldPoint(1942, 4967, 0);
+	private static final WorldPoint nextToDispenser = new WorldPoint(1940,4962,0);
 	private int globalTimeout = 0;
-
+	private int dumpCount = 0;
+	private int expectedDumpCount = 1;
 
 	@Override
 	protected void startUp() {
@@ -110,20 +112,19 @@ public class BDBlastFurnacePlugin extends Plugin
 	public void onMenuOptionClicked(MenuOptionClicked event) {
 		if (event.getMenuOption().contains("BD One Click Blast Furnace")){
 			handleClick(event);
+			log.info(event.getMenuOption() + ", "
+					+ event.getMenuTarget() + ", "
+					+ event.getId() + ", "
+					+ event.getMenuAction().name() + ", "
+					+ event.getParam0() + ", "
+					+ event.getParam1());
 		}
-
-		log.info(event.getMenuOption() + ", "
-				+ event.getMenuTarget() + ", "
-				+ event.getId() + ", "
-				+ event.getMenuAction().name() + ", "
-				+ event.getParam0() + ", "
-				+ event.getParam1());
 	}
 
 	private void handleClick(MenuOptionClicked event) {
 		//Check if something is blocking
 		if (globalTimeout > 0){
-			log.info("Timeout was " + globalTimeout);
+			//log.info("Timeout was " + globalTimeout);
 			event.consume();
 			return;
 		}
@@ -141,13 +142,27 @@ public class BDBlastFurnacePlugin extends Plugin
 		if(actionQueue.isEmpty()) {
 			int dispenserState = client.getVar(Varbits.BAR_DISPENSER);
 
+			//special case a situation where you got out of sync and there are too many bars already made but you still have ores
+			if ((dispenserState == 2 || dispenserState == 3) && shouldPickUp() && !coalBagIsEmpty){
+				if (inventory.containsItem(COAL)){
+					oneClickUtilsPlugin.sanitizeEnqueue(fillCoalBag(), actionQueue, "Couldn't fill coal bag to make room for bars");
+				} else if (client.getWidget(DISPENSER_WIDGET_ID) != null){
+					oneClickUtilsPlugin.sanitizeEnqueue(takeBarsWidget(), actionQueue, "Couldn't take bars via widget");
+					oneClickUtilsPlugin.sanitizeEnqueue(this.openBank(), actionQueue, "Couldn't open bank");
+				}else{
+					oneClickUtilsPlugin.sanitizeEnqueue(takeFromDispenser(), actionQueue, "Could not find dispenser");
+				}
+			}
+
+
 			//if bank is not open and you have ores
-			if(!bankUtils.isOpen() && (inventory.containsItem(oreID) || inventory.containsItem(COAL))){
+			else if(!bankUtils.isOpen() && (inventory.containsItem(oreID) || inventory.containsItem(COAL)) || (config.doGold() &&inventory.containsItem(GOLD_ORE))){
 				oneClickUtilsPlugin.sanitizeEnqueue(depositToConveyor(-1), actionQueue, "Couldn't load conveyor");
 			}
 
 			//if bank is open, run bank sequence
 			else if (bankUtils.isOpen()){
+				dumpCount = 0;
 				//Deposit bars
 				if(inventory.containsItem(barID)){
 					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.depositAllOfItem(barID), actionQueue, "Couldn't desposit bars");
@@ -158,21 +173,18 @@ public class BDBlastFurnacePlugin extends Plugin
 				}
 
 				//Withdraw stamina
-				if (client.getVar(Varbits.RUN_SLOWED_DEPLETION_ACTIVE) == 0 && client.getEnergy() <= 60){
+				if (client.getVar(Varbits.RUN_SLOWED_DEPLETION_ACTIVE) == 0 && client.getEnergy() <= 75){
 					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawItemAmount(STAMINA_POTION1,1,-1), actionQueue, "Couldn't withdraw 1 dose stamina");
 				}
 
 				//If using coal, fill up coal bag
 				if (bringCoal){
 					oneClickUtilsPlugin.sanitizeEnqueue(fillCoalBagFromBank(), actionQueue, "Couldn't fill coal bag from bank");
-					log.info("Coal bag is not empty");
-					coalBagIsEmpty = false;
 				}
 
 				//There is enough coal in the machine, bring ores, otherwise bring coal/gold
 				if (client.getVar(Varbits.BLAST_FURNACE_COAL) >= coalThreshold || !bringCoal){
 					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawAllItem(oreID), actionQueue, "Couldn't withdraw ores");
-					expectingBarsToBeMade = true;
 				}else{
 					if (config.doGold()){
 						oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawAllItem(GOLD_ORE), actionQueue, "Couldn't withdraw ores");
@@ -181,32 +193,27 @@ public class BDBlastFurnacePlugin extends Plugin
 						oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawAllItem(COAL), actionQueue, "Couldn't withdraw ores");
 						expectingBarsToBeMade = false;
 					}
-
 				}
+
 
 				//Go to conveyor
 				oneClickUtilsPlugin.sanitizeEnqueue(depositToConveyor(-1), actionQueue, "Couldn't load conveyor");
 			}
 
 			//if inventory is full && have bars && bank isnt open, open bank
-			else if (inventory.isFull() && (inventory.containsItem(barID) || inventory.containsItem(GOLD_BAR)) && !bankUtils.isOpen()){
+			else if ((inventory.containsItem(barID) || inventory.containsItem(GOLD_BAR)) && !bankUtils.isOpen()){
 				oneClickUtilsPlugin.sanitizeEnqueue(this.openBank(), actionQueue, "Couldn't open bank");
 			}
 
-			//if by the conveyor and coal ag is not empty
+			//if by the conveyor and coal bag is not empty
 			else if (client.getLocalPlayer().getWorldLocation().equals(nextToConveyor) && !coalBagIsEmpty){
 				oneClickUtilsPlugin.sanitizeEnqueue(emptyCoalBag(), actionQueue, "Couldn't empty coal bag");
 				oneClickUtilsPlugin.sanitizeEnqueue(depositToConveyor(1), actionQueue, "Couldn't load conveyor");
-				if (oneClickUtilsPlugin.isItemEquipped(Set.of(MAX_CAPE_13342))){
-					oneClickUtilsPlugin.sanitizeEnqueue(emptyCoalBag(), actionQueue, "Couldn't empty coal bag");
-					oneClickUtilsPlugin.sanitizeEnqueue(depositToConveyor(1), actionQueue, "Couldn't load conveyor");
-				}
-				log.info("Coal bag is empty");
-				coalBagIsEmpty = true;
 			}
 
 			//if dispenser has bars ready
-			else if (dispenserState == 2 || dispenserState == 3  && !inventory.isFull()){
+			else if ((dispenserState == 2 || dispenserState == 3  && !inventory.isFull()) && (shouldPickUp() || expectingBarsToBeMade) &&
+					client.getLocalPlayer().getWorldLocation().equals(nextToDispenser)){
 				if (client.getWidget(DISPENSER_WIDGET_ID) != null){
 					oneClickUtilsPlugin.sanitizeEnqueue(takeBarsWidget(), actionQueue, "Couldn't take bars via widget");
 					oneClickUtilsPlugin.sanitizeEnqueue(this.openBank(), actionQueue, "Couldn't open bank");
@@ -216,10 +223,10 @@ public class BDBlastFurnacePlugin extends Plugin
 			}
 
 			//if inventory is just a coal bag and coal bag is empty, walk to the dispenser
-			else if(coalBagIsEmpty && inventory.containsItemAmount(COALBAG_ID, 1, false, true)){
+			else if(coalBagIsEmpty && inventory.containsItemAmount(COAL_BAG_12019, 1, false, true)){
 				if(expectingBarsToBeMade){
 					event.consume();
-					LocalPoint point = LocalPoint.fromWorld(client, new WorldPoint(1940,4962,client.getPlane()));
+					LocalPoint point = LocalPoint.fromWorld(client, nextToDispenser);
 					oneClickUtilsPlugin.walkTile(point.getSceneX(), point.getSceneY());
 					return;
 				}else{
@@ -228,22 +235,26 @@ public class BDBlastFurnacePlugin extends Plugin
 			}
 		}
 		if(!actionQueue.isEmpty()){
-			log.info(actionQueue.toString());
+			//log.info(actionQueue.toString());
 			if(actionQueue.peek().getPostActionTickDelay() > 0){
 				globalTimeout = actionQueue.peek().getPostActionTickDelay();
 			}
 			event.setMenuEntry(actionQueue.poll());
+			return;
 		}
+
+		log.info("Got to end of handle click @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
 	}
 
 	@Subscribe
 	private void onGameTick(GameTick gameTick) {
 		if(globalTimeout > 0){
+			//log.info("Gamnetick timeout was " + globalTimeout);
 			globalTimeout--;
 		}
 	}
 
-	private void setBars(){
+	private void setBars() {
 		int thresholdMultiplier = 27;
 		bringCoal = false;
 		switch (config.barType()){
@@ -291,6 +302,13 @@ public class BDBlastFurnacePlugin extends Plugin
 
 
 	private LegacyMenuEntry depositToConveyor(int afterActionTickDelay){
+		expectedDumpCount = 1;
+		if(bringCoal){
+			expectedDumpCount++;
+		}
+		if(oneClickUtilsPlugin.isItemEquipped(Set.of(MAX_CAPE_13342))){
+			expectedDumpCount++;
+		}
 		GameObject conveyor = oneClickUtilsPlugin.getGameObject(CONVEYOR_ID);
 		if(conveyor != null){
 			return new LegacyMenuEntry("Put ore on",
@@ -341,14 +359,15 @@ public class BDBlastFurnacePlugin extends Plugin
 					MenuAction.CC_OP,
 					-1,
 					DISPENSER_WIDGET_ID,
-					false);
+					false,
+					0);
 		}
 		return null;
 	}
 
 
 	private LegacyMenuEntry fillCoalBagFromBank(){
-		WidgetItem coalBagWidget = oneClickUtilsPlugin.getWidgetItem(COALBAG_ID);
+		WidgetItem coalBagWidget = oneClickUtilsPlugin.getWidgetItem(COAL_BAG_12019);
 		if(coalBagWidget != null){
 			return new LegacyMenuEntry( "Fill",
 					"Coal Bag",
@@ -360,9 +379,22 @@ public class BDBlastFurnacePlugin extends Plugin
 		}
 		return null;
 	}
+	private LegacyMenuEntry fillCoalBag(){
+		WidgetItem coalBagWidget = oneClickUtilsPlugin.getWidgetItem(COAL_BAG_12019);
+		if(coalBagWidget != null){
+			return new LegacyMenuEntry( "Fill",
+					"Coal Bag",
+					COAL_BAG_12019,
+					MenuAction.ITEM_FIRST_OPTION,
+					coalBagWidget.getIndex(),
+					9764864,
+					false);
+		}
+		return null;
+	}
 
 	private LegacyMenuEntry emptyCoalBag(){
-		WidgetItem coalBagWidget = oneClickUtilsPlugin.getWidgetItem(COALBAG_ID);
+		WidgetItem coalBagWidget = oneClickUtilsPlugin.getWidgetItem(COAL_BAG_12019);
 		if(coalBagWidget != null){
 			return new LegacyMenuEntry( "Empty",
 					"Coal Bag",
@@ -374,4 +406,40 @@ public class BDBlastFurnacePlugin extends Plugin
 		}
 		return null;
 	}
+
+	private boolean shouldPickUp(){
+		int totalBars =
+						client.getVar(Varbits.BLAST_FURNACE_BRONZE_BAR) +
+						client.getVar(Varbits.BLAST_FURNACE_IRON_BAR) +
+						client.getVar(Varbits.BLAST_FURNACE_STEEL_BAR) +
+						client.getVar(Varbits.BLAST_FURNACE_MITHRIL_BAR) +
+						client.getVar(Varbits.BLAST_FURNACE_ADAMANTITE_BAR) +
+						client.getVar(Varbits.BLAST_FURNACE_RUNITE_BAR) +
+						client.getVar(Varbits.BLAST_FURNACE_SILVER_BAR) +
+						client.getVar(Varbits.BLAST_FURNACE_GOLD_BAR);
+		return totalBars > 27;
+	}
+
+	@Subscribe
+	private void onChatMessage(ChatMessage event){
+		if(event.getMessage().contains("All your ore goes onto the")){
+			dumpCount++;
+			//log.info("Dump count: " + dumpCount);
+			if (dumpCount == expectedDumpCount){
+				coalBagIsEmpty = true;
+			}
+		}
+		if (event.getMessage().contains("The coal bag is now empty")){
+			coalBagIsEmpty = true;
+		}
+		if (event.getMessage().contains("The coal bag contains 36") && oneClickUtilsPlugin.isItemEquipped(Set.of(MAX_CAPE_13342))){
+			coalBagIsEmpty = false;
+		}
+		if (event.getMessage().contains("The coal bag contains 27") && !oneClickUtilsPlugin.isItemEquipped(Set.of(MAX_CAPE_13342))){
+			coalBagIsEmpty = false;
+		}
+	}
+
+
+
 }

@@ -782,7 +782,7 @@ public class OneClickUtilsPlugin extends Plugin {
     public void sanitizeEnqueue(LegacyMenuEntry menuEntry, Queue<LegacyMenuEntry> actionQueue, String errorMessage) {
         if (menuEntry != null){
             actionQueue.add(menuEntry);
-            log.info("Adding to queue: " + menuEntry.getOption() + ", " + menuEntry.getTarget());
+            //log.info("Adding to queue: " + menuEntry.getOption() + ", " + menuEntry.getTarget());
         }else{
             log.info(errorMessage);
         }
