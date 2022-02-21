@@ -26,4 +26,14 @@ public interface BDBlastFurnaceConfig extends Config {
     default boolean doGold() {
         return false;
     }
+
+    @ConfigItem(
+            keyName = "staminaPeriod",
+            name = "Stamina Period",
+            description = "How many seconds between stamina drinks being eligible, recommend around 110 if going full speed. Higher than 120 is meaningless. Lower number means drink earlier",
+            position = 2
+    )
+    default int staminaPeriod() {
+        return 110;
+    }
 }

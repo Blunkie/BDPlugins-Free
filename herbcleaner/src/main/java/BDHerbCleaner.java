@@ -105,7 +105,7 @@ public class BDHerbCleaner extends Plugin {
 					String[] menuActions = itemManager.getItemComposition(item.getId()).getInventoryActions();
 					for (String action : menuActions) {
 						if (action != null && action.contains("Clean")) {
-							oneClickUtilsPlugin.sanitizeEnqueue(cleanHerb(item), actionQueue, "Couldn't clean herb");
+							oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.genericClickItemFirstOption(item), actionQueue, "Couldn't clean herb");
 						}
 					}
 				}
@@ -132,19 +132,6 @@ public class BDHerbCleaner extends Plugin {
 	@Subscribe
 	private void onItemContainerChanged(ItemContainerChanged event){
 		clientThread.execute(this::checkingCleaning);
-	}
-
-	private LegacyMenuEntry cleanHerb(WidgetItem item){
-		if (item != null){
-			return new LegacyMenuEntry("Clean",
-					"Herb " + item.getId(),
-					item.getId(),
-					MenuAction.ITEM_FIRST_OPTION,
-					item.getIndex(),
-					9764864,
-					false);
-		}
-		return null;
 	}
 
 	private void checkingCleaning(){

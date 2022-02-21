@@ -82,9 +82,11 @@ public class BDBlastFurnacePlugin extends Plugin
 	private int globalTimeout = 0;
 	private int dumpCount = 0;
 	private int expectedDumpCount = 1;
+	private long timeOfLastStaminaSip = 0;
 
 	@Override
 	protected void startUp() {
+		timeOfLastStaminaSip = System.currentTimeMillis();
 		actionQueue.clear();
 		setBars();
 	}
@@ -136,6 +138,7 @@ public class BDBlastFurnacePlugin extends Plugin
 			}else{
 				event.setMenuEntry(oneClickUtilsPlugin.eatFood());
 			}
+			timeOfLastStaminaSip = System.currentTimeMillis();
 			return;
 		}
 
@@ -173,7 +176,7 @@ public class BDBlastFurnacePlugin extends Plugin
 				}
 
 				//Withdraw stamina
-				if (client.getVar(Varbits.RUN_SLOWED_DEPLETION_ACTIVE) == 0 && client.getEnergy() <= 75){
+				if ((client.getVar(Varbits.RUN_SLOWED_DEPLETION_ACTIVE) == 0 && client.getEnergy() <= 75) ||  (System.currentTimeMillis()-timeOfLastStaminaSip)/1000 > config.staminaPeriod()){
 					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawItemAmount(STAMINA_POTION1,1,-1), actionQueue, "Couldn't withdraw 1 dose stamina");
 				}
 
@@ -185,6 +188,7 @@ public class BDBlastFurnacePlugin extends Plugin
 				//There is enough coal in the machine, bring ores, otherwise bring coal/gold
 				if (client.getVar(Varbits.BLAST_FURNACE_COAL) >= coalThreshold || !bringCoal){
 					oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawAllItem(oreID), actionQueue, "Couldn't withdraw ores");
+					expectingBarsToBeMade = true;
 				}else{
 					if (config.doGold()){
 						oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.withdrawAllItem(GOLD_ORE), actionQueue, "Couldn't withdraw ores");

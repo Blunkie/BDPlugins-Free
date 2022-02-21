@@ -636,6 +636,23 @@ public class OneClickUtilsPlugin extends Plugin {
         return new LegacyMenuEntry("Deposit All", "", 1, MenuAction.CC_OP, -1, 786474, false);
     }
 
+    public LegacyMenuEntry genericClickItemFirstOption(int itemID){
+        return genericClickItemFirstOption(getWidgetItem(itemID));
+    }
+
+    public LegacyMenuEntry genericClickItemFirstOption(WidgetItem item){
+        if (item != null){
+            return new LegacyMenuEntry("",
+                    "",
+                    item.getId(),
+                    MenuAction.ITEM_FIRST_OPTION,
+                    item.getIndex(),
+                    9764864,
+                    false);
+        }
+        return null;
+    }
+
     public boolean inventoryMatches(ArrayList<InventoryItem> desiredInventory, boolean exact){
         for (InventoryItem item : desiredInventory){
             //if it sets to -1 or "all", make sure we have at least 1
