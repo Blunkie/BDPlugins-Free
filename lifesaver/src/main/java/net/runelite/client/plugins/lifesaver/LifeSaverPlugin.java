@@ -51,13 +51,14 @@ public class LifeSaverPlugin extends Plugin {
 	private int max = 28;
 	private int min = 10;
 	Random random = new Random();
-	private int randomCoinPouchSize = random.nextInt(max - min + 1) + min;
+	private int randomCoinPouchSize = 28;
 	Set<Integer> pouches = Set.of(COIN_POUCH_22531,COIN_POUCH_22532,COIN_POUCH_22523,COIN_POUCH_22534);
 
 
 	@Override
 	protected void startUp() {
 		configManager.setConfiguration("autoprayflick", "onlyInNmz", false);
+		randomizePouch();
 	}
 
 	@Override
@@ -95,6 +96,9 @@ public class LifeSaverPlugin extends Plugin {
 		if (event.getMessage().contains("You are out of food")){
 			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
 		}
+		if (event.getMessage().contains("You open all of the poiuches")){
+			randomizePouch();
+		}
 	}
 
 	@Subscribe
@@ -102,5 +106,9 @@ public class LifeSaverPlugin extends Plugin {
 		if(inventory.containsItemAmount(pouches, randomCoinPouchSize, true, false)){
 			client.insertMenuItem("BD Open Pouch","", MenuAction.UNKNOWN.getId(),0,0,0,false);
 		}
+	}
+
+	private void randomizePouch(){
+		randomCoinPouchSize = random.nextInt(max - min + 1) + min;
 	}
 }
