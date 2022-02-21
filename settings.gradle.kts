@@ -30,6 +30,8 @@ include("oneclickutils")
 include("testplugin")
 include("lifesaver")
 include("blastfurnace")
+include("genericocp")
+include("herbcleaner")
 
 for (project in rootProject.children) {
     project.apply {
