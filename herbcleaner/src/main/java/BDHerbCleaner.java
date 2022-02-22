@@ -105,7 +105,7 @@ public class BDHerbCleaner extends Plugin {
 					String[] menuActions = itemManager.getItemComposition(item.getId()).getInventoryActions();
 					for (String action : menuActions) {
 						if (action != null && action.contains("Clean")) {
-							oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.genericClickItemFirstOption(item), actionQueue, "Couldn't clean herb");
+							oneClickUtilsPlugin.sanitizeEnqueue(oneClickUtilsPlugin.clickItem(item), actionQueue, "Couldn't clean herb");
 						}
 					}
 				}

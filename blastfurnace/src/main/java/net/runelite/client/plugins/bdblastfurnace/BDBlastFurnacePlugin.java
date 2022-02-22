@@ -29,6 +29,7 @@ import net.runelite.client.plugins.oneclickutils.OneClickUtilsPlugin;
 import org.pf4j.Extension;
 
 import javax.inject.Inject;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
@@ -83,6 +84,7 @@ public class BDBlastFurnacePlugin extends Plugin
 	private int dumpCount = 0;
 	private int expectedDumpCount = 1;
 	private long timeOfLastStaminaSip = 0;
+	String menuText = "BD One Click Blast Furnace";
 
 	@Override
 	protected void startUp() {
@@ -106,13 +108,14 @@ public class BDBlastFurnacePlugin extends Plugin
 	@Subscribe
 	private void onClientTick(ClientTick event) {
 		if(bfArea.contains(client.getLocalPlayer().getWorldLocation())){
-			client.insertMenuItem("BD One Click Blast Furnace","",MenuAction.UNKNOWN.getId(),0,0,0,false);
+			client.insertMenuItem(menuText,"",MenuAction.UNKNOWN.getId(),0,0,0,false);
+			client.setTempMenuEntry(Arrays.stream(client.getMenuEntries()).filter(x->x.getOption().equals(menuText)).findFirst().orElse(null));
 		}
 	}
 
 	@Subscribe
 	public void onMenuOptionClicked(MenuOptionClicked event) {
-		if (event.getMenuOption().contains("BD One Click Blast Furnace")){
+		if (event.getMenuOption().contains(menuText)){
 			handleClick(event);
 			log.info(event.getMenuOption() + ", "
 					+ event.getMenuTarget() + ", "

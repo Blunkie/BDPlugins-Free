@@ -20,6 +20,7 @@ import net.runelite.client.plugins.oneclickutils.LegacyMenuEntry;
 import net.runelite.client.plugins.oneclickutils.OneClickUtilsPlugin;
 import org.pf4j.Extension;
 import javax.inject.Inject;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -55,6 +56,7 @@ public class GenericOCP extends Plugin
 
 	private Queue<LegacyMenuEntry> actionQueue = new LinkedList<LegacyMenuEntry>();
 	private int globalTimeout = 0;
+	String menuText = "BD Generic OCP";
 
 
 	@Override
@@ -77,13 +79,14 @@ public class GenericOCP extends Plugin
 	@Subscribe
 	private void onClientTick(ClientTick event) {
 		if(false){
-			client.insertMenuItem("BD Generic OCP","",MenuAction.UNKNOWN.getId(),0,0,0,false);
+			client.insertMenuItem(menuText,"",MenuAction.UNKNOWN.getId(),0,0,0,false);
+			client.setTempMenuEntry(Arrays.stream(client.getMenuEntries()).filter(x->x.getOption().equals(menuText)).findFirst().orElse(null));
 		}
 	}
 
 	@Subscribe
 	public void onMenuOptionClicked(MenuOptionClicked event) {
-		if (event.getMenuOption().contains("BD Generic OCP")){
+		if (event.getMenuOption().contains(menuText)){
 			handleClick(event);
 			log.info(event.getMenuOption() + ", "
 					+ event.getMenuTarget() + ", "

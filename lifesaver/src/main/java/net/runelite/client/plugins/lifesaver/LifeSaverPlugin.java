@@ -79,7 +79,7 @@ public class LifeSaverPlugin extends Plugin {
 		}
 
 		if (event.getMenuOption().contains("BD Open Pouch")){
-			event.setMenuEntry(oneClickUtilsPlugin.genericClickItemFirstOption(inventory.getWidgetItem(pouches)));
+			event.setMenuEntry(oneClickUtilsPlugin.clickItem(inventory.getWidgetItem(pouches)));
 			return;
 		}
 	}

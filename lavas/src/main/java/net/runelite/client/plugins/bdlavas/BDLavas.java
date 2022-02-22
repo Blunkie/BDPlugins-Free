@@ -25,10 +25,7 @@ import net.runelite.client.plugins.oneclickutils.OneClickUtilsPlugin;
 import org.pf4j.Extension;
 
 import javax.inject.Inject;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 
 import static net.runelite.api.ItemID.*;
 import static net.runelite.api.ItemID.RING_OF_DUELING7;
@@ -77,6 +74,7 @@ public class BDLavas extends Plugin
 	private boolean waitingForBinding = false;
 	private boolean teleportLockout = false;
 	private int runEnergyThreshold = 10;
+	String menuText = "BD Lavas";
 
 	private static final int SPELLBOOK_VARBIT = 4070;
 	private static final int LUNAR_VARBIT = 2;
@@ -102,14 +100,14 @@ public class BDLavas extends Plugin
 
 	@Subscribe
 	private void onClientTick(ClientTick event) {
-		if(true){
-			client.insertMenuItem("BD Lavas","",MenuAction.UNKNOWN.getId(),0,0,0,false);
-		}
+
+		client.insertMenuItem(menuText,"",MenuAction.UNKNOWN.getId(),0,0,0,false);
+		client.setTempMenuEntry(Arrays.stream(client.getMenuEntries()).filter(x->x.getOption().equals(menuText)).findFirst().orElse(null));
 	}
 
 	@Subscribe
 	public void onMenuOptionClicked(MenuOptionClicked event) {
-		if (event.getMenuOption().contains("BD Lavas")){
+		if (event.getMenuOption().contains(menuText)){
 			handleClick(event);
 			log.info(event.getMenuOption() + ", "
 					+ event.getMenuTarget() + ", "

@@ -668,16 +668,24 @@ public class OneClickUtilsPlugin extends Plugin {
         return new LegacyMenuEntry("Deposit All", "", 1, MenuAction.CC_OP, -1, 786474, false);
     }
 
-    public LegacyMenuEntry genericClickItemFirstOption(int itemID){
-        return genericClickItemFirstOption(getWidgetItem(itemID));
+    public LegacyMenuEntry clickItem(int itemID){
+        return clickItem(getWidgetItem(itemID));
     }
 
-    public LegacyMenuEntry genericClickItemFirstOption(WidgetItem item){
+    public LegacyMenuEntry clickItem(WidgetItem item){
+        return clickItem(item, null);
+    }
+
+    public LegacyMenuEntry clickItem(int itemID, MenuAction action){
+        return clickItem(getWidgetItem(itemID), action);
+    }
+
+    public LegacyMenuEntry clickItem(WidgetItem item, MenuAction action){
         if (item != null){
             return new LegacyMenuEntry("",
                     "",
                     item.getId(),
-                    MenuAction.ITEM_FIRST_OPTION,
+                    action == null ? MenuAction.ITEM_FIRST_OPTION : action,
                     item.getIndex(),
                     9764864,
                     false);
