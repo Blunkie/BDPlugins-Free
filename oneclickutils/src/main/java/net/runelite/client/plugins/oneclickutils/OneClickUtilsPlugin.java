@@ -182,12 +182,35 @@ public class OneClickUtilsPlugin extends Plugin {
                             MenuAction.CC_OP,
                             -1,
                             WidgetInfo.EQUIPMENT_CAPE.getId(),
-                            false);
+                            false,
+                            3);
                 }
             }
         }
         log.info("One Click Utils: couldn't tele to POH with max cape");
         sendGameMessage("One Click Utils: couldn't tele to POH with max cape");
+        return null;
+    }
+
+    public LegacyMenuEntry maxCapeTeleToCraftingGuild(){
+        ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
+        if (equipmentContainer != null) {
+            Item[] items = equipmentContainer.getItems();
+            for (Item item : items) {
+                if (item.getId() == MAX_CAPE_13342) {
+                    return new LegacyMenuEntry("Tele to Crafting Guild",
+                            "Max Cape",
+                            4,
+                            MenuAction.CC_OP,
+                            -1,
+                            WidgetInfo.EQUIPMENT_CAPE.getId(),
+                            false,
+                            3);
+                }
+            }
+        }
+        log.info("One Click Utils: couldn't tele to Crafting Guild with max cape");
+        sendGameMessage("One Click Utils: couldn't tele to Crafting Guild with max cape");
         return null;
     }
 
@@ -363,7 +386,11 @@ public class OneClickUtilsPlugin extends Plugin {
     }
 
     public WidgetItem getWidgetItem(Collection<Integer> ids) {
-        Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
+        return getWidgetItem(ids, null);
+    }
+
+    public WidgetItem getWidgetItem(Collection<Integer> ids, WidgetInfo widgetInfo) {
+        Widget inventoryWidget = client.getWidget(widgetInfo == null ? WidgetInfo.INVENTORY : widgetInfo);
         if (inventoryWidget != null) {
             Collection<WidgetItem> items = inventoryWidget.getWidgetItems();
             for (WidgetItem item : items) {
@@ -512,6 +539,10 @@ public class OneClickUtilsPlugin extends Plugin {
                 false);
     }
 
+    public boolean isItemEquipped(int itemID){
+        return isItemEquipped(Set.of(itemID));
+    }
+
     public boolean isItemEquipped(Collection<Integer> itemIds) {
         assert client.isClientThread();
         ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
@@ -525,6 +556,7 @@ public class OneClickUtilsPlugin extends Plugin {
         }
         return false;
     }
+
 
     public Queue<LegacyMenuEntry> resolveInventory(ArrayList<InventoryItem> desiredInventory, boolean exact){
         Queue<LegacyMenuEntry> queue = new LinkedList<LegacyMenuEntry>();
@@ -777,6 +809,28 @@ public class OneClickUtilsPlugin extends Plugin {
             return ((GameObject) gameObject).getSceneMinLocation().getY();
         }
         return(gameObject.getLocalLocation().getSceneY());
+    }
+
+    public LegacyMenuEntry clickGameObject(GameObject object, MenuAction action, int timeout){
+        if (object != null){
+            return new LegacyMenuEntry("Click",
+                    "Game Object",
+                    object.getId(),
+                    action == null ? MenuAction.GAME_OBJECT_FIRST_OPTION : action,
+                    getObjectParam0(object),
+                    getObjectParam1(object),
+                    false,
+                    timeout);
+        }
+        return null;
+    }
+
+    public LegacyMenuEntry clickGameObject(int gameObjectID, MenuAction action){
+        return clickGameObject(getGameObject(gameObjectID), action);
+    }
+
+    public LegacyMenuEntry clickGameObject(GameObject object, MenuAction action){
+        return clickGameObject(object, action, 0);
     }
 
     public void combineQueues(Queue<LegacyMenuEntry> destinationQueue, Queue<LegacyMenuEntry> extraQueue){
