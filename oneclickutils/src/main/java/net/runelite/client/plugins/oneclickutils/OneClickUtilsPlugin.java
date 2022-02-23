@@ -130,6 +130,10 @@ public class OneClickUtilsPlugin extends Plugin {
         return ticksSinceLastXpDrop;
     }
 
+    public void setTicksSinceLastXpDrop(int ticks){
+        ticksSinceLastXpDrop = ticks;
+    }
+
     public LegacyMenuEntry teleToBank(BankTele bankTeleMethod){
         ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
         if (equipmentContainer != null) {

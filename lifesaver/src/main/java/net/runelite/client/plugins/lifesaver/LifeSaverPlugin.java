@@ -13,6 +13,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.iutils.InventoryUtils;
+import net.runelite.client.plugins.iutils.scripts.ReflectBreakHandler;
 import net.runelite.client.plugins.oneclickutils.LegacyMenuEntry;
 import net.runelite.client.plugins.oneclickutils.OneClickUtilsPlugin;
 import org.pf4j.Extension;
@@ -42,6 +43,8 @@ public class LifeSaverPlugin extends Plugin {
 	private LifeSaverConfig config;
 	@Inject
 	private InventoryUtils inventory;
+	@Inject
+	private ReflectBreakHandler chinBreakHandler;
 	@Provides
 	LifeSaverConfig provideConfig(ConfigManager configManager) {
 		return configManager.getConfig(LifeSaverConfig.class);
@@ -53,16 +56,23 @@ public class LifeSaverPlugin extends Plugin {
 	Random random = new Random();
 	private int randomCoinPouchSize = 28;
 	Set<Integer> pouches = Set.of(COIN_POUCH_22531,COIN_POUCH_22532,COIN_POUCH_22523,COIN_POUCH_22534);
+	private boolean breaking = false;
+	private boolean watchdogTimerPopped = false;
 
 
 	@Override
 	protected void startUp() {
+		oneClickUtilsPlugin.setTicksSinceLastXpDrop(0);
+		chinBreakHandler.registerPlugin(this);
+		chinBreakHandler.startPlugin(this);
 		configManager.setConfiguration("autoprayflick", "onlyInNmz", false);
 		randomizePouch();
 	}
 
 	@Override
 	protected void shutDown() {
+		chinBreakHandler.stopPlugin(this);
+		chinBreakHandler.unregisterPlugin(this);
 	}
 
 	@Subscribe
@@ -86,8 +96,26 @@ public class LifeSaverPlugin extends Plugin {
 
 	@Subscribe
 	public void onGameTick(GameTick event) {
-		if (oneClickUtilsPlugin.getTicksSinceLastXpDrop() > config.watchDogTickTimer()){
+		if(chinBreakHandler.isBreakActive(this)){
 			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
+			return;
+		}else if (breaking){
+			configManager.setConfiguration("autoprayflick", "onlyInNmz", false);
+			breaking = false;
+			oneClickUtilsPlugin.setTicksSinceLastXpDrop(0);
+		}
+
+		if(chinBreakHandler.shouldBreak(this)){
+			breaking = true;
+			chinBreakHandler.startBreak(this);
+		}
+
+		if (oneClickUtilsPlugin.getTicksSinceLastXpDrop() > config.watchDogTickTimer() && !watchdogTimerPopped){
+			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
+			chinBreakHandler.stopPlugin(this);
+			log.info("Watchdog timer went off. Stopping");
+			oneClickUtilsPlugin.sendGameMessage("Watchdog timer went off. Stopping");
+			watchdogTimerPopped = true;
 		}
 	}
 
