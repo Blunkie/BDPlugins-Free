@@ -6,22 +6,24 @@ import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
 import net.runelite.api.coords.WorldArea;
 import net.runelite.api.events.*;
-import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.iutils.InventoryUtils;
-import net.runelite.client.plugins.iutils.scripts.ReflectBreakHandler;
-import net.runelite.client.plugins.oneclickutils.LegacyMenuEntry;
 import net.runelite.client.plugins.oneclickutils.OneClickUtilsPlugin;
+import net.runelite.client.ui.overlay.OverlayManager;
 import org.pf4j.Extension;
 import javax.inject.Inject;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Random;
 import java.util.Set;
 
 import static net.runelite.api.ItemID.*;
+import static org.apache.commons.lang3.time.DurationFormatUtils.formatDuration;
 
 @SuppressWarnings("ALL")
 @Extension
@@ -44,10 +46,19 @@ public class LifeSaverPlugin extends Plugin {
 	@Inject
 	private InventoryUtils inventory;
 	@Inject
-	private ReflectBreakHandler chinBreakHandler;
+	OverlayManager overlayManager;
+	@Inject
+	private LifeSaverOverlay overlay;
+
 	@Provides
 	LifeSaverConfig provideConfig(ConfigManager configManager) {
 		return configManager.getConfig(LifeSaverConfig.class);
+	}
+
+	enum State{
+		RUNNING,
+		BREAKING,
+		STOPPED
 	}
 
 	private static final WorldArea prifSpawnArea = new WorldArea(3253,6072,25,25,0);
@@ -56,23 +67,37 @@ public class LifeSaverPlugin extends Plugin {
 	Random random = new Random();
 	private int randomCoinPouchSize = 28;
 	Set<Integer> pouches = Set.of(COIN_POUCH_22531,COIN_POUCH_22532,COIN_POUCH_22523,COIN_POUCH_22534);
-	private boolean breaking = false;
-	private boolean watchdogTimerPopped = false;
-
+	String openPouch = "BD Open Pouch";
+	public Instant startTime;
+	public Instant nextBreakStartTime;
+	public Instant nextResumeStartTime;
+	String timeFormat;
+	State state;
+	String stopReason;
+	int totalBreaks;
 
 	@Override
 	protected void startUp() {
-		oneClickUtilsPlugin.setTicksSinceLastXpDrop(0);
-		chinBreakHandler.registerPlugin(this);
-		chinBreakHandler.startPlugin(this);
-		configManager.setConfiguration("autoprayflick", "onlyInNmz", false);
+		resetBreaks();
+		overlayManager.add(overlay);
 		randomizePouch();
+		startTime = Instant.now();
 	}
 
 	@Override
 	protected void shutDown() {
-		chinBreakHandler.stopPlugin(this);
-		chinBreakHandler.unregisterPlugin(this);
+		overlayManager.remove(overlay);
+	}
+
+	@Subscribe
+	private void onConfigChanged(ConfigChanged event) {
+		if (!event.getGroup().equals("BDLifeSaverPlugin")) {
+			return;
+		}
+
+		if (event.getKey().equals("takeBreaks")){
+			resetBreaks();
+		}
 	}
 
 	@Subscribe
@@ -83,12 +108,11 @@ public class LifeSaverPlugin extends Plugin {
 	private void handleClick(MenuOptionClicked event) {
 		if (prifSpawnArea.contains(client.getLocalPlayer().getWorldLocation())){
 			event.setMenuEntry(oneClickUtilsPlugin.maxCapeTeleToPOH());
-			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
-			log.info("Found you in Prif, teleporting to POH. Disabling other plugins");
+			stop("Found you in prif");
 			return;
 		}
 
-		if (event.getMenuOption().contains("BD Open Pouch")){
+		if (event.getMenuOption().contains(openPouch)){
 			event.setMenuEntry(oneClickUtilsPlugin.clickItem(inventory.getWidgetItem(pouches)));
 			return;
 		}
@@ -96,33 +120,35 @@ public class LifeSaverPlugin extends Plugin {
 
 	@Subscribe
 	public void onGameTick(GameTick event) {
-		if(chinBreakHandler.isBreakActive(this)){
-			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
+		if (state == State.STOPPED){
 			return;
-		}else if (breaking){
-			configManager.setConfiguration("autoprayflick", "onlyInNmz", false);
-			breaking = false;
-			oneClickUtilsPlugin.setTicksSinceLastXpDrop(0);
 		}
 
-		if(chinBreakHandler.shouldBreak(this)){
-			breaking = true;
-			chinBreakHandler.startBreak(this);
+		if (oneClickUtilsPlugin.getTicksSinceLastXpDrop() > config.watchDogTickTimer() && config.watchDogTickTimer() > 0){
+			stop("XP Tick Watchdog went off");
+			return;
 		}
 
-		if (oneClickUtilsPlugin.getTicksSinceLastXpDrop() > config.watchDogTickTimer() && !watchdogTimerPopped){
-			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
-			chinBreakHandler.stopPlugin(this);
-			log.info("Watchdog timer went off. Stopping");
-			oneClickUtilsPlugin.sendGameMessage("Watchdog timer went off. Stopping");
-			watchdogTimerPopped = true;
+		if(shouldBreak()){
+			state = State.BREAKING;
+			setClickerEnabled(false);
+			nextBreakStartTime = null;
+			scheduleResumeTime();
+			totalBreaks++;
+		}else if(shouldResume()){
+			state = State.RUNNING;
+			setClickerEnabled(true);
+			nextResumeStartTime = null;
+			scheduleBreakTime();
 		}
 	}
+
+
 
 	@Subscribe
 	private void onChatMessage(ChatMessage event){
 		if (event.getMessage().contains("You are out of food")){
-			configManager.setConfiguration("autoprayflick", "onlyInNmz", true);
+			stop(event.getMessage());
 		}
 		if (event.getMessage().contains("You open all of the pouches")){
 			randomizePouch();
@@ -132,11 +158,62 @@ public class LifeSaverPlugin extends Plugin {
 	@Subscribe
 	private void onClientTick(ClientTick event) {
 		if(inventory.containsItemAmount(pouches, Math.min(randomCoinPouchSize,28), true, false)){
-			client.insertMenuItem("BD Open Pouch","", MenuAction.UNKNOWN.getId(),0,0,0,false);
+			client.insertMenuItem(openPouch,"", MenuAction.UNKNOWN.getId(),0,0,0,false);
 		}
 	}
 
 	private void randomizePouch(){
 		randomCoinPouchSize = random.nextInt(max - min + 1) + min;
+	}
+
+	private boolean shouldBreak() {
+		return nextBreakStartTime == null ? false : nextBreakStartTime.isBefore(Instant.now());
+	}
+
+	private boolean shouldResume(){
+		return nextResumeStartTime == null ? false : nextResumeStartTime.isBefore(Instant.now());
+	}
+
+	private void scheduleBreakTime(){
+		if (config.breakMinMinutes() > config.breakMaxMinutes()){
+			stop("Config min larger than config max");
+			return;
+		}
+		long randomTime =  random.nextInt(config.runMaxMinutes()*60000 - config.runMinMinutes()*60000 + 1) + config.runMinMinutes()*60000;
+		log.info("RandomTime: " + randomTime);
+		nextBreakStartTime = Instant.ofEpochMilli(System.currentTimeMillis() + randomTime);
+	}
+
+	private void scheduleResumeTime(){
+		if (config.runMinMinutes() > config.runMaxMinutes()){
+			stop("Config min larger than config max");
+			return;
+		}
+		long randomTime =  random.nextInt(config.breakMaxMinutes()*60000 - config.breakMinMinutes()*60000 + 1) + config.breakMinMinutes()*60000;
+		log.info("RandomTime: " + randomTime);
+		nextResumeStartTime = Instant.ofEpochMilli(System.currentTimeMillis() + randomTime);
+	}
+
+	private void stop(String reason){
+		state = State.STOPPED;
+		setClickerEnabled(false);
+		log.info("Life Saver Stopping: " + reason);
+		oneClickUtilsPlugin.sendGameMessage("Life Saver Stopping: " + reason);
+		stopReason = reason;
+	}
+
+	private void resetBreaks(){
+		state = state.RUNNING;
+		oneClickUtilsPlugin.setTicksSinceLastXpDrop(0);
+		setClickerEnabled(true);
+		if (config.takeBreaks()){
+			totalBreaks = 0;
+			scheduleBreakTime();
+			nextResumeStartTime = null;
+		}
+	}
+
+	private void setClickerEnabled(boolean enabled){
+		configManager.setConfiguration("autoprayflick", "onlyInNmz", !enabled);
 	}
 }
