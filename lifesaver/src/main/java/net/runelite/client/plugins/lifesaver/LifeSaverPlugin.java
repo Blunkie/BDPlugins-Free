@@ -23,7 +23,6 @@ import java.util.Random;
 import java.util.Set;
 
 import static net.runelite.api.ItemID.*;
-import static org.apache.commons.lang3.time.DurationFormatUtils.formatDuration;
 
 @SuppressWarnings("ALL")
 @Extension
@@ -75,6 +74,7 @@ public class LifeSaverPlugin extends Plugin {
 	State state;
 	String stopReason;
 	int totalBreaks;
+	int ticksCache;
 
 	@Override
 	protected void startUp() {
@@ -124,22 +124,26 @@ public class LifeSaverPlugin extends Plugin {
 			return;
 		}
 
-		if (oneClickUtilsPlugin.getTicksSinceLastXpDrop() > config.watchDogTickTimer() && config.watchDogTickTimer() > 0){
+		if (oneClickUtilsPlugin.getTicksSinceLastXpDrop() > config.watchDogTickTimer() && config.watchDogTickTimer() > 0 && state == state.RUNNING){
 			stop("XP Tick Watchdog went off");
 			return;
 		}
 
-		if(shouldBreak()){
-			state = State.BREAKING;
-			setClickerEnabled(false);
-			nextBreakStartTime = null;
-			scheduleResumeTime();
-			totalBreaks++;
-		}else if(shouldResume()){
-			state = State.RUNNING;
-			setClickerEnabled(true);
-			nextResumeStartTime = null;
-			scheduleBreakTime();
+		if (config.takeBreaks()){
+			if(shouldBreak()){
+				state = State.BREAKING;
+				ticksCache = oneClickUtilsPlugin.getTicksSinceLastXpDrop();
+				setClickerEnabled(false);
+				nextBreakStartTime = null;
+				scheduleResumeTime();
+				totalBreaks++;
+			}else if(shouldResume()){
+				state = State.RUNNING;
+				oneClickUtilsPlugin.setTicksSinceLastXpDrop(ticksCache);
+				setClickerEnabled(true);
+				nextResumeStartTime = null;
+				scheduleBreakTime();
+			}
 		}
 	}
 
@@ -180,7 +184,6 @@ public class LifeSaverPlugin extends Plugin {
 			return;
 		}
 		long randomTime =  random.nextInt(config.runMaxMinutes()*60000 - config.runMinMinutes()*60000 + 1) + config.runMinMinutes()*60000;
-		log.info("RandomTime: " + randomTime);
 		nextBreakStartTime = Instant.ofEpochMilli(System.currentTimeMillis() + randomTime);
 	}
 
@@ -190,7 +193,6 @@ public class LifeSaverPlugin extends Plugin {
 			return;
 		}
 		long randomTime =  random.nextInt(config.breakMaxMinutes()*60000 - config.breakMinMinutes()*60000 + 1) + config.breakMinMinutes()*60000;
-		log.info("RandomTime: " + randomTime);
 		nextResumeStartTime = Instant.ofEpochMilli(System.currentTimeMillis() + randomTime);
 	}
 
@@ -209,6 +211,10 @@ public class LifeSaverPlugin extends Plugin {
 		if (config.takeBreaks()){
 			totalBreaks = 0;
 			scheduleBreakTime();
+			nextResumeStartTime = null;
+		}else{
+			totalBreaks = -1;
+			nextBreakStartTime = null;
 			nextResumeStartTime = null;
 		}
 	}

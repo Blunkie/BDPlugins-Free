@@ -64,28 +64,36 @@ class LifeSaverOverlay extends OverlayPanel {
 
         switch(plugin.state){
             case RUNNING:
-                Duration duration2 = Duration.between(Instant.now(), plugin.nextBreakStartTime);
-                timeFormat = (duration2.toHours() < 1) ? "mm:ss" : "HH:mm:ss";
                 try {
+                    Duration duration2 = Duration.between(Instant.now(), plugin.nextBreakStartTime);
+                    timeFormat = (duration2.toHours() < 1) ? "mm:ss" : "HH:mm:ss";
                     tableComponent.addRow("Time until break:", formatDuration(duration2.toMillis(), timeFormat));
                 }catch(IllegalArgumentException e){
                     tableComponent.addRow("Time until break:", "NOW");
+                }catch(NullPointerException e){
+
                 }
                 break;
             case STOPPED:
                 tableComponent.addRow("Stop Reason:", plugin.stopReason);
                 break;
             case BREAKING:
-                duration2 = Duration.between(Instant.now(), plugin.nextResumeStartTime);
-                timeFormat = (duration2.toHours() < 1) ? "mm:ss" : "HH:mm:ss";
                 try {
+                    Duration duration2 = Duration.between(Instant.now(), plugin.nextResumeStartTime);
+                    timeFormat = (duration2.toHours() < 1) ? "mm:ss" : "HH:mm:ss";
                     tableComponent.addRow("Time until resume:", formatDuration(duration2.toMillis(), timeFormat));
                 }catch(IllegalArgumentException e){
                     tableComponent.addRow("Time until resume:", "NOW");
+                }catch(NullPointerException e){
+
                 }
         }
-        tableComponent.addRow("Total Breaks:", Integer.toString(plugin.totalBreaks));
-        tableComponent.addRow("Ticks since last xp drop:", Integer.toString(oneClickUtilsPlugin.getTicksSinceLastXpDrop()));
+        if(config.takeBreaks()){
+            tableComponent.addRow("Total Breaks:", Integer.toString(plugin.totalBreaks));
+        }
+        if(config.watchDogTickTimer() > 0){
+            tableComponent.addRow("Ticks since last xp drop:", Integer.toString(oneClickUtilsPlugin.getTicksSinceLastXpDrop()));
+        }
 
         if (!tableComponent.isEmpty()) {
             panelComponent.setBackgroundColor(ColorUtil.fromHex("#121212")); //Material Dark default
