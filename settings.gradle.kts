@@ -33,6 +33,7 @@ include("blastfurnace")
 include("genericocp")
 include("herbcleaner")
 include("lavas")
+include("shopper")
 
 for (project in rootProject.children) {
     project.apply {
@@ -43,3 +44,4 @@ for (project in rootProject.children) {
         require(buildFile.isFile) { "Project '${project.path} must have a $buildFile build script" }
     }
 }
+

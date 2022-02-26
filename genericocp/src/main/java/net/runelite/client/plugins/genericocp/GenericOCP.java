@@ -70,7 +70,7 @@ public class GenericOCP extends Plugin
 
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event) {
-		if(event.getGroup().equals("BD Generic OCP")) {
+		if(event.getGroup().equals(menuText)) {
 
 		}
 	}
