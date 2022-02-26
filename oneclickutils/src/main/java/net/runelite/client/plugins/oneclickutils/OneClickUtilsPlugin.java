@@ -11,6 +11,7 @@ import net.runelite.api.util.Text;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.api.widgets.WidgetItem;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
@@ -26,6 +27,7 @@ import net.runelite.client.plugins.iutils.BankUtils;
 import net.runelite.client.plugins.iutils.ObjectUtils;
 import net.runelite.client.plugins.iutils.iUtils;
 import net.runelite.client.plugins.iutils.Banks;
+import net.runelite.client.util.WorldUtil;
 import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldResult;
 import net.runelite.rs.api.RSClient;
@@ -35,7 +37,10 @@ import net.runelite.client.events.ConfigChanged;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.awt.*;
 import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static net.runelite.api.ItemID.*;
 import static net.runelite.api.ItemID.RING_OF_DUELING7;
@@ -66,8 +71,12 @@ public class OneClickUtilsPlugin extends Plugin {
     private Client client;
     @Inject
     private WorldService worldService;
+    @Inject
+    private ClientThread clientThread;
 
 
+    private net.runelite.api.World quickHopTargetWorld;
+    private int MAX_PLAYER_COUNT = 1900;
     private static final Splitter NEWLINE_SPLITTER = Splitter.on("\n").omitEmptyStrings().trimResults();
     private static final Set<Integer> duelingRings = Set.of(RING_OF_DUELING8, RING_OF_DUELING1, RING_OF_DUELING2, RING_OF_DUELING3, RING_OF_DUELING4, RING_OF_DUELING5, RING_OF_DUELING6, RING_OF_DUELING7);
     private static final Set<Integer> maxCape = Set.of(MAX_CAPE_13342);
@@ -81,6 +90,10 @@ public class OneClickUtilsPlugin extends Plugin {
             ZAMORAK_BREW3,ZAMORAK_BREW2,ZAMORAK_BREW1,ZAMORAK_BREW4);
     private long lastXP = 0;
     private int ticksSinceLastXpDrop = -1;
+
+    //do these ever change?
+    private static int shopGroupID = 300;
+    private static int shopChildID = 16;
 
 
 
@@ -616,22 +629,6 @@ public class OneClickUtilsPlugin extends Plugin {
         return queue;
     }
 
-    public LegacyMenuEntry worldHop(int worldID){
-        WorldResult worldResult = worldService.getWorlds();
-        World world = worldResult.findWorld(worldID);
-        if (world == null) {
-            log.debug("Couldn't find world " + worldID);
-            return null;
-        }
-        return new LegacyMenuEntry("",
-                "",
-                1,
-                MenuAction.CC_OP,
-                worldID,
-                4522000,
-                false);
-    }
-
     public LegacyMenuEntry depositAllOfItem(WidgetItem item) {
         if (!bankUtils.isOpen() && !bankUtils.isDepositBoxOpen()) {
             return null;
@@ -670,6 +667,94 @@ public class OneClickUtilsPlugin extends Plugin {
             return new LegacyMenuEntry("Deposit All", "", 1, MenuAction.CC_OP, -1, 12582916, false);
         }
         return new LegacyMenuEntry("Deposit All", "", 1, MenuAction.CC_OP, -1, 786474, false);
+    }
+
+    public LegacyMenuEntry clickNPC(NPC npc, MenuAction action){
+        if (npc != null){
+            return new LegacyMenuEntry("Click",
+                    npc.getName(),
+                    npc.getIndex(),
+                    (action == null) ? MenuAction.NPC_FIRST_OPTION : action,
+                    0,
+                    0,
+                    false);
+        }
+        return null;
+    }
+
+    public MenuAction getNPCMenuActionsWithString(NPC npc, String actionString){
+        if (npc != null){
+            switch (getActions(npc).indexOf(actionString)) {
+                case 0:
+                    return MenuAction.NPC_FIRST_OPTION;
+                case 1:
+                    return MenuAction.NPC_SECOND_OPTION;
+                case 2:
+                    return MenuAction.NPC_THIRD_OPTION;
+                case 3:
+                    return MenuAction.NPC_FOURTH_OPTION;
+                case 4:
+                    return MenuAction.NPC_FIFTH_OPTION;
+                default:
+                    sendGameMessage("Did not find " + actionString + " option on " + npc.getName());
+                    return null;
+            }
+        }
+        return null;
+    }
+
+    public Collection<WidgetItem> getShopItems(Client client)
+    {
+        Collection<WidgetItem> widgetItems = new ArrayList<>();
+        Widget shop = client.getWidget(shopGroupID, shopChildID);
+        if (shop != null && !shop.isHidden())
+        {
+            Widget[] children = shop.getDynamicChildren();
+            for (int i = 1; i < children.length; i++)
+            {
+                Widget child = children[i];
+                // set bounds to same size as default inventory
+                Rectangle bounds = child.getBounds();
+                bounds.setBounds(bounds.x - 1, bounds.y - 1, 32, 32);
+                widgetItems.add(new WidgetItem(child.getItemId(), child.getItemQuantity(), i - 1, bounds, child, null)); // todo: maybe this shouldnt just be "false"
+            }
+        }
+        return widgetItems;
+    }
+
+    public boolean isShopOpen(Client client){
+        Widget shop = client.getWidget(shopGroupID, shopChildID);
+        return shop != null && !shop.isHidden();
+    }
+
+    public LegacyMenuEntry buyItemFromShop(WidgetItem item, int quantity){
+        if (item == null){
+            return null;
+        }
+        int id = 1;
+        if (quantity == 50){
+            id = 5;
+        }else if (quantity == 1){
+            id = 2;
+        }else{
+            log.info("buyItemFromShop in OneClickUtils can't handle that value");
+            return null;
+        }
+        return new LegacyMenuEntry("Buy",
+                Integer.toString(item.getId()),
+                id,
+                MenuAction.CC_OP,
+                item.getIndex() + 1,
+                19660816,
+                false);
+    }
+
+    public LegacyMenuEntry buyItemFromShop(WidgetItem item){
+        return buyItemFromShop(item, 50);
+    }
+
+    private List<String> getActions(NPC npc) {
+        return Arrays.stream(npc.getComposition().getActions()).map(o -> o == null ? null : Text.removeTags(o)).collect(Collectors.toList());
     }
 
     public LegacyMenuEntry clickItem(int itemID){
@@ -738,6 +823,19 @@ public class OneClickUtilsPlugin extends Plugin {
             }
         }
         return unexpectedItems;
+    }
+
+    public Collection<WidgetItem> selectWidgetItems(Collection<WidgetItem> all, Set<Integer> desired){
+        if (all == null){
+            return null;
+        }
+        Collection<WidgetItem> result = new ArrayList<WidgetItem>();
+        for (WidgetItem item : all){
+            if (desired.contains(item.getId())){
+                result.add(item);
+            }
+        }
+        return result;
     }
 
     public LegacyMenuEntry withdrawAllItem(Widget bankItemWidget) {
@@ -870,4 +968,154 @@ public class OneClickUtilsPlugin extends Plugin {
             log.info(errorMessage);
         }
     }
+
+    public void hop(boolean previous) {
+
+        WorldResult worldResult = worldService.getWorlds();
+        if (worldResult == null || client.getGameState() != GameState.LOGGED_IN)
+        {
+            return;
+        }
+
+        World currentWorld = worldResult.findWorld(client.getWorld());
+
+        if (currentWorld == null)
+        {
+            return;
+        }
+
+        EnumSet<net.runelite.http.api.worlds.WorldType> currentWorldTypes = currentWorld.getTypes().clone();
+        // Make it so you always hop out of PVP and high risk worlds
+
+        currentWorldTypes.remove(net.runelite.http.api.worlds.WorldType.PVP);
+        currentWorldTypes.remove(net.runelite.http.api.worlds.WorldType.HIGH_RISK);
+
+        // Don't regard these worlds as a type that must be hopped between
+        currentWorldTypes.remove(net.runelite.http.api.worlds.WorldType.BOUNTY);
+        currentWorldTypes.remove(net.runelite.http.api.worlds.WorldType.SKILL_TOTAL);
+        currentWorldTypes.remove(net.runelite.http.api.worlds.WorldType.LAST_MAN_STANDING);
+
+        List<World> worlds = worldResult.getWorlds();
+
+        int worldIdx = worlds.indexOf(currentWorld);
+        int totalLevel = client.getTotalLevel();
+
+
+        World world;
+        do
+        {
+			/*
+				Get the previous or next world in the list,
+				starting over at the other end of the list
+				if there are no more elements in the
+				current direction of iteration.
+			 */
+            if (previous)
+            {
+                worldIdx--;
+
+                if (worldIdx < 0)
+                {
+                    worldIdx = worlds.size() - 1;
+                }
+            }
+            else
+            {
+                worldIdx++;
+
+                if (worldIdx >= worlds.size())
+                {
+                    worldIdx = 0;
+                }
+            }
+
+            world = worlds.get(worldIdx);
+            EnumSet<net.runelite.http.api.worlds.WorldType> types = world.getTypes().clone();
+
+            types.remove(net.runelite.http.api.worlds.WorldType.BOUNTY);
+            // Treat LMS world like casual world
+            types.remove(net.runelite.http.api.worlds.WorldType.LAST_MAN_STANDING);
+
+            if (types.contains(net.runelite.http.api.worlds.WorldType.SKILL_TOTAL))
+            {
+                try
+                {
+                    int totalRequirement = Integer.parseInt(world.getActivity().substring(0, world.getActivity().indexOf(" ")));
+
+                    if (totalLevel >= totalRequirement)
+                    {
+                        types.remove(net.runelite.http.api.worlds.WorldType.SKILL_TOTAL);
+                    }
+                }
+                catch (NumberFormatException ex)
+                {
+                    log.warn("Failed to parse total level requirement for target world", ex);
+                }
+            }
+
+            // Avoid switching to near-max population worlds, as it will refuse to allow the hop if the world is full
+            if (world.getPlayers() >= MAX_PLAYER_COUNT)
+            {
+                continue;
+            }
+
+            // Break out if we've found a good world to hop to
+            if (currentWorldTypes.equals(types))
+            {
+                break;
+            }
+        }
+        while (world != currentWorld);
+
+        if (world == currentWorld)
+        {
+            log.info("Couldn't find a world to quick-hop to.");
+
+        }
+        else
+        {
+            hop(world.getId());
+        }
+    }
+
+    private void hop(int worldId) {
+        assert client.isClientThread();
+        WorldResult worldResult = worldService.getWorlds();
+        // Don't try to hop if the world doesn't exist
+        World world = worldResult.findWorld(worldId);
+        if (world == null)
+        {
+            return;
+        }
+
+        final net.runelite.api.World rsWorld = client.createWorld();
+        rsWorld.setActivity(world.getActivity());
+        rsWorld.setAddress(world.getAddress());
+        rsWorld.setId(world.getId());
+        rsWorld.setPlayerCount(world.getPlayers());
+        rsWorld.setLocation(world.getLocation());
+        rsWorld.setTypes(WorldUtil.toWorldTypes(world.getTypes()));
+        log.info("OCU: Trying to hop to world: " + rsWorld.getId());
+        sendGameMessage("OCU: Trying to hop to world: " + rsWorld.getId());
+        quickHopTargetWorld = rsWorld;
+        client.hopToWorld(quickHopTargetWorld);
+    }
+
+    public LegacyMenuEntry closeShop(){
+        if (isShopOpen(client)){
+            return new LegacyMenuEntry("Close",
+                    "Shop",
+                    1,
+                    MenuAction.CC_OP,
+                    11,
+                    19660801,
+                    false);
+        }
+        return null;
+    }
+
+    private void hopTo(World world) {
+        clientThread.invoke(() -> hop(world.getId()));
+    }
+
 }

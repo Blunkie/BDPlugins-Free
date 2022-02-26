@@ -90,4 +90,17 @@ public interface LifeSaverConfig extends Config {
 	default int breakMaxMinutes() {
 		return 2;
 	}
+
+	@ConfigItem(
+			keyName = "stopAfterBreaks",
+			name = "Stop After X Breaks",
+			description = "stopAfterBreaks",
+			position = 7,
+			hidden = true,
+			unhide = "takeBreaks",
+			section = "takeBreaksConfig"
+	)
+	default int stopAfterBreaks() {
+		return 4;
+	}
 }

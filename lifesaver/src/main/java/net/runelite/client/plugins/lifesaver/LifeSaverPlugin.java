@@ -17,7 +17,6 @@ import net.runelite.client.plugins.oneclickutils.OneClickUtilsPlugin;
 import net.runelite.client.ui.overlay.OverlayManager;
 import org.pf4j.Extension;
 import javax.inject.Inject;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Random;
 import java.util.Set;
@@ -137,6 +136,9 @@ public class LifeSaverPlugin extends Plugin {
 				nextBreakStartTime = null;
 				scheduleResumeTime();
 				totalBreaks++;
+				if (config.stopAfterBreaks() > 0 && totalBreaks >= config.stopAfterBreaks()){
+					stop("Stopping after " + totalBreaks + " breaks");
+				}
 			}else if(shouldResume()){
 				state = State.RUNNING;
 				oneClickUtilsPlugin.setTicksSinceLastXpDrop(ticksCache);
