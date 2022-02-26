@@ -94,16 +94,6 @@ public class TestPlugin extends Plugin
 	private void onGameTick(GameTick gameTick) {
 	}
 
-	private void testWorldHop(MenuOptionClicked event){
-		if(actionQueue.isEmpty()) {
-			actionQueue.add(oneClickUtilsPlugin.worldHop(600));
-		}
-		if(!actionQueue.isEmpty()){
-			log.info(actionQueue.toString());
-			event.setMenuEntry(actionQueue.poll());
-		}
-	}
-
 	private void testLogout(MenuOptionClicked event) {
 		if(actionQueue.isEmpty()) {
 			actionQueue.add(oneClickUtilsPlugin.logout());
