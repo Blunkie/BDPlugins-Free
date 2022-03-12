@@ -28,11 +28,8 @@ rootProject.name = "BD Plugins"
 
 include("oneclickutils")
 include("testplugin")
-include("lifesaver")
-include("blastfurnace")
 include("genericocp")
 include("herbcleaner")
-include("lavas")
 include("shopper")
 
 for (project in rootProject.children) {
